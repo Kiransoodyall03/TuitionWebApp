@@ -44,48 +44,47 @@ export const useAuth = () => {
     }
   };
 
-  const createBooking = async (
-    booking: Booking) => {
+  const createBooking = async (booking: Booking) => {
     try {
-        const bookingCollection = collection(db, "bookings");
-        await addDoc(bookingCollection, booking);
-        console.log("Booking created successfully:", booking);
-        }
-    catch (err) {
-        console.error("Error creating booking:", err); 
-    };
+      const bookingCollection = collection(db, "bookings");
+      await addDoc(bookingCollection, booking);
+      console.log("Booking created successfully:", booking);
+    } catch (err) {
+      console.error("Error creating booking:", err);
+    }
+  };
 
-    const convertBookingToLesson = async (booking: Booking): Promise<Lesson | null> => {
-        if (!booking.confirmed) {
-            console.warn("Booking not confirmed. Lesson will not be created.");
-            return null;
-        }
+  const convertBookingToLesson = async (booking: Booking): Promise<Lesson | null> => {
+    if (!booking.confirmed) {
+      console.warn("Booking not confirmed. Lesson will not be created.");
+      return null;
+    }
 
-        try {
-            const lessonsCollection = collection(db, "lessons");
+    try {
+      const lessonsCollection = collection(db, "lessons");
 
-            const newLesson: Omit<Lesson, "lessonId"> = {
-            bookingId: booking.bookingId,
-            date: booking.date,
-            notes: "",
-            lessonStatus: "scheduled", // You can change this to "scheduled" if needed
-            };
+      const newLesson: Omit<Lesson, "lessonId"> = {
+        bookingId: booking.bookingId,
+        date: booking.date,
+        notes: "",
+        lessonStatus: "scheduled",
+      };
 
-            const docRef = await addDoc(lessonsCollection, newLesson);
+      const docRef = await addDoc(lessonsCollection, newLesson);
 
-            const createdLesson: Lesson = {
-            ...newLesson,
-            lessonId: docRef.id,
-            };
+      const createdLesson: Lesson = {
+        ...newLesson,
+        lessonId: docRef.id,
+      };
 
-            console.log("Lesson created from booking:", createdLesson);
-            return createdLesson;
+      console.log("Lesson created from booking:", createdLesson);
+      return createdLesson;
 
-        } catch (error) {
-            console.error("Error converting booking to lesson:", error);
-            return null;
-        }
-    };
+    } catch (error) {
+      console.error("Error converting booking to lesson:", error);
+      return null;
+    }
+  };
 
   return {
     studentData,
@@ -93,6 +92,7 @@ export const useAuth = () => {
     userData,
     handleLogin,
     error,
+    createBooking,
+    convertBookingToLesson,
   };
 };
-}

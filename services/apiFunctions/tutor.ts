@@ -1,6 +1,7 @@
 import { collection, query, where, getDocs } from "@firebase/firestore";
 import { db } from "../firebase/config";
 import { Booking, Lesson } from "../types";
+import { useAuth } from "./useAuth";
 
 export const useTutor = () => {
     const fetchTutorBookings = async (
