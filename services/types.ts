@@ -3,6 +3,8 @@ export interface User {
     username: string;
     password: string;
     role: 'tutor' | 'student';
+    Student?: Student;
+    Tutor?: Tutor;
 }
 
 export interface Booking{
@@ -25,7 +27,6 @@ export interface Lesson {
     lessonId: string;
     bookingId: string;
     notes: string;
-    isCompleted: boolean;
     date: {
         year: number;
         month: number;
@@ -33,7 +34,7 @@ export interface Lesson {
         hour: number;
         minute: number;
     }
-    lessonStatus: 'completed' | 'cancelled' | 'student did not join' | 'tutor did not join';
+    lessonStatus: 'completed' | 'cancelled' | 'student did not join' | 'tutor did not join' | 'scheduled';
 }
 
 export interface Tutor {
