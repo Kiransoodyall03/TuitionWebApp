@@ -1,3 +1,10 @@
+export interface User {
+    userId: string;
+    username: string;
+    password: string;
+    role: 'tutor' | 'student';
+}
+
 export interface Booking{
     bookingId: string;
     tutorId: string;
@@ -31,9 +38,6 @@ export interface Lesson {
 
 export interface Tutor {
     tutorId: string;
-    name: string;
-    email: string;
-    password: string;
     contactNumber: string;
     profilePicture?: string;
     subjects: string[];
@@ -42,7 +46,6 @@ export interface Tutor {
 
 export interface Student {
     studentId: string;
-    name: string;
     username: string;
     grade: string;
     email?: string;
