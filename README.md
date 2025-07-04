@@ -26,3 +26,18 @@ if (newBooking.confirmed) {
   await convertBookingToLesson(newBooking);
 }
 
+sample usage of fetchlessonsbyusertype:
+
+useEffect(() => {
+  if (!userData) return;
+
+  if (userData.role === "student" && userData.Student?.studentId) {
+    fetchStudentBookings(userData.Student.studentId).then(setBookings);
+    fetchStudentLessons(userData.Student.studentId).then(setLessons);
+  }
+
+  if (userData.role === "tutor" && userData.Tutor?.tutorId) {
+    fetchTutorBookings(userData.Tutor.tutorId).then(setBookings);
+    fetchTutorLessons(userData.Tutor.tutorId).then(setLessons);
+  }
+}, [userData]);
