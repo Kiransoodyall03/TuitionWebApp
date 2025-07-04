@@ -1,15 +1,18 @@
-// pages/login/index.tsx
+// /pages/login/index.tsx
 
 import React from "react";
+import styles from "./style/Login.module.scss";
 
 const LoginPage: React.FC = () => {
   return (
-    <div style={{ padding: "2rem", textAlign: "center" }}>
-      <h1>Login Page</h1>
-      <button style={{ marginTop: "1rem", padding: "0.5rem 1rem" }}>
-        Login
-      </button>
-    </div>
+    <>
+      <h1 className = {styles.heading}>Welcome to Company Name</h1>
+      <form className={styles.login}>
+        <input type="text" placeholder="Username" />
+        <input type="password" placeholder="Password" />
+        <button type="submit">Login</button>
+      </form>
+    </>
   );
 };
 
