@@ -1,7 +1,7 @@
 // Fixed LoginPage Component
 import React, { useState } from 'react';
 import { useAuth } from '../../services/apiFunctions/useAuth';
-
+import { useUserContext } from '../../services/userContext';
 type LoginPageProps = {
   onLogin: (username: string) => void;
 };
@@ -10,8 +10,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { handleLogin, error } = useAuth(); // Get both function and error from useAuth
-
+  const {login, userType, error} = useUserContext();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -22,8 +21,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
     setIsLoading(true);
     
     try {
-      await handleLogin(username, password);
-      // If login is successful, call onLogin
+      await login(username, password);
       onLogin(username);
     } catch (err) {
       // Error is already handled by useAuth hook

@@ -7,52 +7,6 @@ export const useAuth = () => {
   const [authenticatedUser, setAuthenticatedUser] = useState<AuthenticatedUser | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (username: string, password: string) => {
-    try {
-      setError(null);
-
-      // First, try to find a student with the given credentials
-      const studentCollection = collection(db, "students");
-      const studentQuery = query(
-        studentCollection,
-        where("username", "==", username),
-        where("password", "==", password)
-      );
-      const studentSnapshot = await getDocs(studentQuery);
-
-      if (!studentSnapshot.empty) {
-        const fetchedStudent = studentSnapshot.docs[0].data() as Student;
-        setAuthenticatedUser(fetchedStudent);
-        console.log("Student logged in:", fetchedStudent.username);
-        return;
-      }
-
-      // If no student found, try to find a tutor
-      const tutorCollection = collection(db, "tutors");
-      const tutorQuery = query(
-        tutorCollection,
-        where("username", "==", username),
-        where("password", "==", password)
-      );
-      const tutorSnapshot = await getDocs(tutorQuery);
-
-      if (!tutorSnapshot.empty) {
-        const fetchedTutor = tutorSnapshot.docs[0].data() as Tutor;
-        setAuthenticatedUser(fetchedTutor);
-        console.log("Tutor logged in:", fetchedTutor.username);
-        return;
-      }
-
-      // If neither student nor tutor found
-      setError("Invalid username or password.");
-      console.error("Login failed: No matching user");
-
-    } catch (err) {
-      setError("An error occurred during login.");
-      console.error("Login error:", err);
-    }
-  };
-
   const logout = () => {
     setAuthenticatedUser(null);
     setError(null);
@@ -132,7 +86,6 @@ export const useAuth = () => {
     error,
     
     // Actions
-    handleLogin,
     logout,
     createBooking,
     convertBookingToLesson,

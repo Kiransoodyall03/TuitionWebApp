@@ -1,8 +1,8 @@
-type TutorHomeProps = {
+type StudentHomeProps = {
   navigation?: any;
 };
 
-export const TutorHome = ({ navigation }: TutorHomeProps) => {
+export const StudentHome = ({ navigation }: StudentHomeProps) => {
   return (
     <div className="flex-1 bg-white p-8">
       <div className="max-w-4xl mx-auto">

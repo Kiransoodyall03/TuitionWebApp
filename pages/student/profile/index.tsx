@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 
-type TutorProfileProps = {
+type StudentProfileProps = {
   userName?: string;
   navigation?: any;
 };
-export const TutorProfile = ({ userName }: TutorProfileProps) => {
+export const StudentProfile = ({ userName }: StudentProfileProps) => {
 
   const [formData, setFormData] = useState({
-    displayName: userName || 'Kellen: Tutor',
+    displayName: userName || 'Kellen: Student',
     email: 'kellen@example.com',
     phone: '+1 (555) 123-4567',
     bio: 'Software developer passionate about creating great user experiences.',
