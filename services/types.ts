@@ -1,13 +1,4 @@
-export interface User {
-    userId: string;
-    username: string;
-    password: string;
-    role: 'tutor' | 'student';
-    Student?: Student;
-    Tutor?: Tutor;
-}
-
-export interface Booking{
+export interface Booking {
     bookingId: string;
     tutorId: string;
     studentId: string;
@@ -17,7 +8,7 @@ export interface Booking{
         day: number;
         hour: number;
         minute: number;
-    }
+    };
     subject: string;
     extraDetails: string;
     confirmed: boolean;
@@ -33,12 +24,15 @@ export interface Lesson {
         day: number;
         hour: number;
         minute: number;
-    }
+    };
     lessonStatus: 'completed' | 'cancelled' | 'student did not join' | 'tutor did not join' | 'scheduled';
 }
 
 export interface Tutor {
     tutorId: string;
+    username: string;     // Added for authentication
+    password: string;     // Added for authentication
+    role: 'tutor';        // Added for role identification
     contactNumber: string;
     profilePicture?: string;
     subjects: string[];
@@ -48,18 +42,17 @@ export interface Tutor {
 export interface Student {
     studentId: string;
     username: string;
+    password: string;
+    role: 'student';      // Added for role identification
     grade: string;
     email?: string;
-    password: string;
     contactNumber?: string;
-    subjects: [
-        {
-            subjectName: string;
-            tutorId: string;
-            currentMark: number;
-            targetMark: number;
-        }
-    ];
+    subjects: {           // Fixed: Changed from [{}] to {}[]
+        subjectName: string;
+        tutorId: string;
+        currentMark: number;
+        targetMark: number;
+    }[];
     parentId: string;
     parentName: string;
     parentContactNumber: string;
@@ -75,6 +68,18 @@ export interface TokenPurchase {
         year: number;
         month: number;
         day: number;
-    }
+    };
     paidAmount: number;
+}
+
+// Union type for authenticated users
+export type AuthenticatedUser = Student | Tutor;
+
+// Type guards
+export function isStudent(user: AuthenticatedUser): user is Student {
+    return user.role === 'student';
+}
+
+export function isTutor(user: AuthenticatedUser): user is Tutor {
+    return user.role === 'tutor';
 }

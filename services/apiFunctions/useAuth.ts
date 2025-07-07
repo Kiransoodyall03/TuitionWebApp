@@ -1,47 +1,61 @@
 import { collection, query, where, getDocs, addDoc } from "@firebase/firestore";
 import { db } from "../firebase/config";
 import { useState } from "react";
-import { User, Student, Tutor, Lesson, Booking } from "../types";
+import { Student, Tutor, Lesson, Booking, AuthenticatedUser, isStudent, isTutor } from "../types";
 
 export const useAuth = () => {
-  const [studentData, setStudentData] = useState<Student | null>(null);
-  const [tutorData, setTutorData] = useState<Tutor | null>(null);
-  const [userData, setUserData] = useState<User | null>(null);
+  const [authenticatedUser, setAuthenticatedUser] = useState<AuthenticatedUser | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async (username: string, password: string) => {
     try {
       setError(null);
 
-      const userCollection = collection(db, "users");
-      const userQuery = query(
-        userCollection,
+      // First, try to find a student with the given credentials
+      const studentCollection = collection(db, "students");
+      const studentQuery = query(
+        studentCollection,
         where("username", "==", username),
         where("password", "==", password)
       );
-      const querySnapshot = await getDocs(userQuery);
+      const studentSnapshot = await getDocs(studentQuery);
 
-      if (querySnapshot.empty) {
-        setError("Invalid username or password.");
-        console.error("Login failed: No matching user");
+      if (!studentSnapshot.empty) {
+        const fetchedStudent = studentSnapshot.docs[0].data() as Student;
+        setAuthenticatedUser(fetchedStudent);
+        console.log("Student logged in:", fetchedStudent.username);
         return;
       }
 
-      const fetchedUser = querySnapshot.docs[0].data() as User;
-      setUserData(fetchedUser);
+      // If no student found, try to find a tutor
+      const tutorCollection = collection(db, "tutors");
+      const tutorQuery = query(
+        tutorCollection,
+        where("username", "==", username),
+        where("password", "==", password)
+      );
+      const tutorSnapshot = await getDocs(tutorQuery);
 
-      if (fetchedUser.role === "student" && fetchedUser.Student) {
-        setStudentData(fetchedUser.Student);
-      } else if (fetchedUser.role === "tutor" && fetchedUser.Tutor) {
-        setTutorData(fetchedUser.Tutor);
-      } else {
-        console.warn("Valid role but missing sub-data (Student or Tutor).");
+      if (!tutorSnapshot.empty) {
+        const fetchedTutor = tutorSnapshot.docs[0].data() as Tutor;
+        setAuthenticatedUser(fetchedTutor);
+        console.log("Tutor logged in:", fetchedTutor.username);
+        return;
       }
+
+      // If neither student nor tutor found
+      setError("Invalid username or password.");
+      console.error("Login failed: No matching user");
 
     } catch (err) {
       setError("An error occurred during login.");
       console.error("Login error:", err);
     }
+  };
+
+  const logout = () => {
+    setAuthenticatedUser(null);
+    setError(null);
   };
 
   const createBooking = async (booking: Booking) => {
@@ -86,13 +100,53 @@ export const useAuth = () => {
     }
   };
 
+  // Helper functions
+  const getCurrentUser = (): AuthenticatedUser | null => {
+    return authenticatedUser;
+  };
+
+  const getCurrentStudent = (): Student | null => {
+    return authenticatedUser && isStudent(authenticatedUser) ? authenticatedUser : null;
+  };
+
+  const getCurrentTutor = (): Tutor | null => {
+    return authenticatedUser && isTutor(authenticatedUser) ? authenticatedUser : null;
+  };
+
+  const getUserRole = (): 'student' | 'tutor' | null => {
+    return authenticatedUser?.role || null;
+  };
+
+  const getUserId = (): string | null => {
+    if (!authenticatedUser) return null;
+    return isStudent(authenticatedUser) ? authenticatedUser.studentId : authenticatedUser.tutorId;
+  };
+
+  const isLoggedIn = (): boolean => {
+    return authenticatedUser !== null;
+  };
+
   return {
-    studentData,
-    tutorData,
-    userData,
-    handleLogin,
+    // Main state
+    authenticatedUser,
     error,
+    
+    // Actions
+    handleLogin,
+    logout,
     createBooking,
     convertBookingToLesson,
+    
+    // Helper functions
+    getCurrentUser,
+    getCurrentStudent,
+    getCurrentTutor,
+    getUserRole,
+    getUserId,
+    isLoggedIn,
+    
+    // Backward compatibility (derived state)
+    studentData: getCurrentStudent(),
+    tutorData: getCurrentTutor(),
   };
 };
