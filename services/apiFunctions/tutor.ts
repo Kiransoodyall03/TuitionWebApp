@@ -1,9 +1,31 @@
-import { collection, query, where, getDocs } from "@firebase/firestore";
+import { collection, query, where, getDocs, getDoc, doc } from "@firebase/firestore";
 import { db } from "../firebase/config";
-import { Booking, Lesson } from "../types";
+import { Booking, Lesson, Tutor } from "../types";
 import { useAuth } from "./useAuth";
+import { useUserContext } from "../userContext";
 
 export const useTutor = () => {
+    const {user} = useUserContext();
+    const fetchTutor = async (tutorId: string): Promise<Tutor | null> => {
+    try {
+        const docRef = doc(db, "tutors", tutorId); // Access by doc ID
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+        console.warn("No tutor found with id:", tutorId);
+        return null;
+        }
+
+        const tutorData = docSnap.data() as Tutor;
+        return {
+        ...tutorData,
+        tutorId: docSnap.id, // include the ID in the return object
+        };
+    } catch (error) {
+        console.error("Error fetching tutor:", error);
+        return null;
+    }
+    };
     const fetchTutorBookings = async (
     tutorId: string
     ): Promise<Booking[]> => {
@@ -62,6 +84,7 @@ export const useTutor = () => {
 
     return {
         fetchTutorBookings,
+        fetchTutor,
         fetchTutorLessons,
     };
 }

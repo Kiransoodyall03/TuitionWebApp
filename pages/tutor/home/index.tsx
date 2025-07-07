@@ -1,8 +1,14 @@
+import { useUserContext } from "../../../services/userContext";
+import { Tutor } from "../../../services/types";
 type TutorHomeProps = {
   navigation?: any;
 };
 
 export const TutorHome = ({ navigation }: TutorHomeProps) => {
+    const { user, userType } = useUserContext();
+    if (userType !== 'tutor' || !user) return <div>Not a tutor.</div>;
+    const tutor = user as Tutor;
+    
   return (
     <div className="flex-1 bg-white p-8">
       <div className="max-w-4xl mx-auto">

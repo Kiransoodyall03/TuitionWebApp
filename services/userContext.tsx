@@ -22,42 +22,59 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [userType, setUserType] = useState<UserType>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const login = async (username: string, password: string) => {
-    setError(null);
-    // Try student
-    const studentSnapshot = await getDocs(
-      query(
-        collection(db, 'students'),
-        where('username', '==', username),
-        where('password', '==', password)
-      )
-    );
-    if (!studentSnapshot.empty) {
-      const fetchedStudent = studentSnapshot.docs[0].data() as Student;
-      setUser(fetchedStudent);
-      setUserType('student');
-      return;
-    }
+const login = async (username: string, password: string) => {
+  setError(null);
 
-    // Try tutor
-    const tutorSnapshot = await getDocs(
-      query(
-        collection(db, 'tutors'),
-        where('username', '==', username),
-        where('password', '==', password)
-      )
-    );
-    if (!tutorSnapshot.empty) {
-      const fetchedTutor = tutorSnapshot.docs[0].data() as Tutor;
-      setUser(fetchedTutor);
-      setUserType('tutor');
-      return;
-    }
+  // Try student login
+  const studentSnapshot = await getDocs(
+    query(
+      collection(db, 'students'),
+      where('username', '==', username),
+      where('password', '==', password)
+    )
+  );
 
-    // No match
-    setError('Invalid username or password.');
-    throw new Error('Invalid username or password.');
-  };
+  if (!studentSnapshot.empty) {
+    const doc = studentSnapshot.docs[0];
+    const studentData = doc.data() as Omit<Student, 'studentId'>;
+
+    const fullStudent: Student = {
+      ...studentData,
+      studentId: doc.id, // Include the auto-generated document ID
+    };
+
+    setUser(fullStudent);
+    setUserType('student');
+    return;
+  }
+
+  // Try tutor login
+  const tutorSnapshot = await getDocs(
+    query(
+      collection(db, 'tutors'),
+      where('username', '==', username),
+      where('password', '==', password)
+    )
+  );
+
+  if (!tutorSnapshot.empty) {
+    const doc = tutorSnapshot.docs[0];
+    const tutorData = doc.data() as Omit<Tutor, 'tutorId'>;
+
+    const fullTutor: Tutor = {
+      ...tutorData,
+      tutorId: doc.id, // Include the auto-generated document ID
+    };
+
+    setUser(fullTutor);
+    setUserType('tutor');
+    return;
+  }
+
+  // No match
+  setError('Invalid username or password.');
+  throw new Error('Invalid username or password.');
+};
 
   const logout = () => {
     setUser(null);
