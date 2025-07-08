@@ -1,0 +1,25 @@
+.container {
+    padding: 20px;
+    font-family: sans-serif;
+  }
+  
+  .heading {
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+  
+  .infoBoxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center; /* centers the rows when fewer than 4 boxes */
+  }
+  
+  .box {
+    flex: 0 0 calc(25% - 20px); /* 4 across with gap accounted for */
+    min-width: 200px;
+    background-color: #f4f4f4;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }

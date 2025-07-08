@@ -5,6 +5,9 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Student } from '../../../services/types';
 import { useUserContext } from '../../../services/userContext';
 
+import styles from './StudentHome.module.css';
+
+
 const localizer = momentLocalizer(moment);
 
 type StudentHomeProps = {
@@ -122,35 +125,29 @@ export const StudentHome = ({ navigation }: StudentHomeProps) => {
 
   return (
     <div className="flex-1 bg-white p-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Student Dashboard</h1>
-        
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-orange-50 p-6 rounded-lg border border-orange-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Upcoming Sessions</h3>
-            <p className="text-3xl font-bold text-orange-600">3</p>
-            <p className="text-sm text-gray-600">This Week</p>
+      <div className={styles.container}>    
+        <div className={styles.infoBoxes}>
+          <div className={styles.box}>
+            <h2>Upcoming Lessons</h2>
+            <p>3 this week.</p>
           </div>
-          
-          <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Completed</h3>
-            <p className="text-3xl font-bold text-green-600">12</p>
-            <p className="text-sm text-gray-600">This Month</p>
+          <div className={styles.box}>
+            <h2>Completed</h2>
+            <p>12 this month.</p>
           </div>
-          
-          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Study Hours</h3>
-            <p className="text-3xl font-bold text-blue-600">24</p>
-            <p className="text-sm text-gray-600">This Week</p>
+          <div className={styles.box}>
+            <h2>Study Hours</h2>
+            <p>24 this week.</p>
           </div>
 
-          <div className="bg-red-50 p-6 rounded-lg border border-red-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Deadlines</h3>
-            <p className="text-3xl font-bold text-red-600">2</p>
-            <p className="text-sm text-gray-600">Coming Up</p>
+          <div className={styles.box}>
+            <h2>Deadlines</h2>
+            <p>2 up coming.</p>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto">
 
         {/* Calendar Section */}
         <div className="bg-gray-50 p-6 rounded-lg border mb-8">

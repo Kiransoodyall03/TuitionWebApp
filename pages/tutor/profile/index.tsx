@@ -9,20 +9,33 @@ export const TutorProfile: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
-        <h1 className={styles.heading}>Select View</h1>
-        <Dropdown
-          label="Select role"
-          options={ROLE_OPTIONS}
-          selected={role}
-          onChange={(v) => setRole(v)}
-        />
-        <p className={styles.selectedText}>
-          You are viewing: <strong>{role}</strong>
-        </p>
+      <div >
+        <div className={styles.card}>
+          <h1 className={styles.heading}>Select View</h1>
+          <Dropdown 
+            label="Select role"
+            options={ROLE_OPTIONS}
+            selected={role}
+            onChange={(v) => setRole(v)}
+          />
+          <p className={styles.selectedText}>
+            You are viewing: <strong>{role}</strong>
+          </p>
+        </div>
+      </div>
+
+      <div className={styles.boxContainer}>
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className={styles.box}>
+            <h4>Box {i + 1}</h4>
+            <p>No Information on <strong>{role}</strong></p>
+          </div>
+        ))}
       </div>
     </div>
   );
+  
+  
 };
 
 export default TutorProfile;

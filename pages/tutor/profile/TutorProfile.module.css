@@ -1,18 +1,18 @@
 .page {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
+  flex-direction: column;
+  align-items: center; /* center content horizontally */
   padding: 40px;
-  background-color: #f9fafb;
+  /*background-color: #f9fafb;*/
 }
 
 .card {
   background-color: #fff;
+  width: 250px;
   padding: 24px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  text-align: center;
+  text-align: left;
 }
 
 .heading {
@@ -22,8 +22,32 @@
   color: #1f2937;
 }
 
+.dropDown {
+  width: 30px;
+}
+
 .selectedText {
   margin-top: 16px;
+  min-width: 20px;
   font-family: sans-serif;
   color: #4b5563;
+}
+
+.boxContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.box {
+  width: 30%;
+  min-width: 200px; /* prevents shrinking too much on smaller screens */
+  background-color: #e5e7eb;
+  padding: 16px;
+  border-radius: 8px;
+  font-family: sans-serif;
+  color: #1f2937;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  text-align: center;
 }
