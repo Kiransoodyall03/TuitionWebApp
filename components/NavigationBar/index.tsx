@@ -1,6 +1,7 @@
 // components/NavigationBar.tsx
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import styles from './NavigationBar.module.css';
 
 interface Tab {
   key: string;
@@ -22,32 +23,39 @@ export const NavigationBar: React.FC<NavigationBarProps> = ({
   const location = useLocation();
 
   return (
-    <nav className="bg-blue-600 text-white p-4">
-      <div className="container mx-auto flex justify-between items-center">
-        <div className="flex space-x-4">
-          {tabs.map((tab) => (
-            <Link
-              key={tab.key}
-              to={tab.path}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                location.pathname === tab.path
-                  ? 'bg-blue-700 text-white'
-                  : 'text-blue-100 hover:bg-blue-500 hover:text-white'
-              }`}
+    <nav className={styles.navContainer}>
+      <div className={styles.navWrapper}>
+        <div className={styles.navInner}>
+          <div className={styles.leftSection}>
+            <div className={styles.welcomeText}>
+              Welcome {userName}
+            </div>
+            
+            <div className={styles.navLinks}>
+              {tabs.map((tab) => (
+                <Link
+                  key={tab.key}
+                  to={tab.path}
+                  className={`${styles.navItem} ${
+                    location.pathname === tab.path
+                      ? styles.navItemActive
+                      : styles.navItemInactive
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          
+          <div className={styles.rightSection}>
+            <button
+              onClick={onLogout}
+              className={styles.logoutBtn}
             >
-              {tab.label}
-            </Link>
-          ))}
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <span className="text-sm">Welcome, {userName}</span>
-          <button
-            onClick={onLogout}
-            className="bg-red-500 hover:bg-red-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-          >
-            Logout
-          </button>
+              Logout
+            </button>
+          </div>
         </div>
       </div>
     </nav>
