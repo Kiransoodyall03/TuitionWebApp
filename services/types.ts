@@ -47,7 +47,7 @@ export interface Student {
     grade: string;
     email?: string;
     contactNumber?: string;
-    subjects: {           // Fixed: Changed from [{}] to {}[]
+    subjects: {           
         subjectName: string;
         tutorId: string;
         currentMark: number;

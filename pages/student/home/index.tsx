@@ -1,8 +1,16 @@
+import React from 'react';
+import { Student } from '../../../services/types';
+import { useUserContext } from '../../../services/userContext';
+
 type StudentHomeProps = {
   navigation?: any;
 };
 
 export const StudentHome = ({ navigation }: StudentHomeProps) => {
+      const { user, userType } = useUserContext();
+      if (userType !== 'student' || !user) return <div>Not a Student.</div>;
+      const student = user as Student;
+  
   return (
     <div className="flex-1 bg-white p-8">
       <div className="max-w-4xl mx-auto">

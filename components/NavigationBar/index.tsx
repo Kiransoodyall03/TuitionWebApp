@@ -1,46 +1,50 @@
 // components/NavigationBar.tsx
 import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
-type Tab = { key: string; label: string };
+interface Tab {
+  key: string;
+  label: string;
+  path: string;
+}
 
 interface NavigationBarProps {
-  userName: string;
   tabs: Tab[];
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  userName: string;
   onLogout: () => void;
 }
 
 export const NavigationBar: React.FC<NavigationBarProps> = ({
-  userName,
   tabs,
-  activeTab,
-  onTabChange,
+  userName,
   onLogout,
 }) => {
+  const location = useLocation();
+
   return (
-    <nav className="bg-orange-600 text-white">
-      <div className="flex h-12 items-center w-full">
-        <div className="px-4 font-medium">
-          Welcome {userName}
-        </div>
-        <div className="flex space-x-2 ml-4">
+    <nav className="bg-blue-600 text-white p-4">
+      <div className="container mx-auto flex justify-between items-center">
+        <div className="flex space-x-4">
           {tabs.map((tab) => (
-            <button
+            <Link
               key={tab.key}
-              onClick={() => onTabChange(tab.key)}
-              className={`px-6 py-3 font-medium hover:bg-orange-700 transition-colors ${
-                activeTab === tab.key ? 'bg-orange-700' : ''
+              to={tab.path}
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === tab.path
+                  ? 'bg-blue-700 text-white'
+                  : 'text-blue-100 hover:bg-blue-500 hover:text-white'
               }`}
             >
               {tab.label}
-            </button>
+            </Link>
           ))}
         </div>
-        <div className="ml-auto px-4">
+        
+        <div className="flex items-center space-x-4">
+          <span className="text-sm">Welcome, {userName}</span>
           <button
             onClick={onLogout}
-            className="px-6 py-3 font-medium hover:bg-red-600 transition-colors"
+            className="bg-red-500 hover:bg-red-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
           >
             Logout
           </button>

@@ -2,15 +2,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../services/apiFunctions/useAuth';
 import { useUserContext } from '../../services/userContext';
-type LoginPageProps = {
-  onLogin: (username: string) => void;
-};
 
-const LoginPage = ({ onLogin }: LoginPageProps) => {
+const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const {login, userType, error} = useUserContext();
+  const { login, userType, error } = useUserContext();
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -22,7 +20,8 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
     
     try {
       await login(username, password);
-      onLogin(username);
+      // No need to call onLogin - routing will handle navigation automatically
+      // when userType changes in context
     } catch (err) {
       // Error is already handled by useAuth hook
       console.error('Login failed:', err);
