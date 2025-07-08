@@ -1,0 +1,91 @@
+/* InteractiveCalendar.css */
+
+.calendar-container {
+  padding: 20px;
+}
+
+.calendar-title {
+  margin-bottom: 20px;
+  color: #1f2937;
+}
+
+.instructions-box {
+  background-color: #f9fafb;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.instructions-box h4 {
+  margin: 0 0 10px 0;
+  color: #374151;
+}
+
+.instructions-box ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #6b7280;
+}
+
+.calendar-wrapper {
+  height: 600px;
+}
+
+.current-events-section {
+  margin-top: 20px;
+}
+
+.current-events-section h4 {
+  color: #374151;
+}
+
+.events-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.event-badge {
+  padding: 8px 12px;
+  background-color: #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.event-button {
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Event type colors */
+.event-meeting {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.event-review {
+  background-color: #ef4444;
+  color: white;
+}
+
+.event-social {
+  background-color: #10b981;
+  color: white;
+}
+
+.event-default {
+  background-color: #6b7280;
+  color: white;
+}

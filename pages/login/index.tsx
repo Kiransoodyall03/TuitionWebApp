@@ -7,8 +7,8 @@ const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, userType, error } = useUserContext();
-  
+  const userContext = useUserContext();
+  const { login, userType, error } = userContext;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
