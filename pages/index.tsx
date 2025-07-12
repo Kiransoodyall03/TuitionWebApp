@@ -9,6 +9,7 @@ import { TutorProfile } from './tutor/profile';
 import { NavigationBar } from '../components/NavigationBar';
 import { UserProvider, useUserContext } from '../services/userContext';
 import { ProtectedRoute } from '../components/ProtectedRoute';
+import '../color.css'
 
 const AppContent: React.FC = () => {
   const { user, userType, logout, isLoading } = useUserContext();
@@ -16,10 +17,13 @@ const AppContent: React.FC = () => {
   // Show loading spinner while checking cookies
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--neutral-100)' }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div 
+            className="animate-spin rounded-full h-32 w-32 border-b-2 mx-auto"
+            style={{ borderColor: 'var(--primary-500)' }}
+          ></div>
+          <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>Loading...</p>
         </div>
       </div>
     );
@@ -27,7 +31,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Router>
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--neutral-100)' }}>
         {/* Only show NavigationBar if user is logged in */}
         {userType && user && (
           <NavigationBar

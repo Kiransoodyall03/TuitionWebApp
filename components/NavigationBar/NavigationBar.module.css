@@ -1,9 +1,9 @@
 /* NavigationBar.module.css */
 
 .navContainer {
-  background-color: #D76F30;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid #B85C25;
+  background-color: var(--primary-600);
+  box-shadow: var(--shadow-md);
+  border-bottom: 1px solid var(--primary-700);
   font-family: 'Asap', sans-serif;
 }
 
@@ -30,7 +30,7 @@
 .welcomeText {
   font-size: 1rem;
   font-weight: 600;
-  color: #FFFFFF;
+  color: var(--text-inverse);
   margin-right: 2rem;
   padding: 0.75rem 1rem;
 }
@@ -46,9 +46,9 @@
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #FFFFFF;
+  color: var(--text-inverse);
   text-decoration: none;
-  border-right: 1px solid #B85C25;
+  border-right: 1px solid var(--primary-700);
   transition: background-color 0.3s ease;
   min-height: 4rem;
 }
@@ -58,18 +58,18 @@
 }
 
 .navItemActive {
-  background-color: #B85C25;
-  color: #FFFFFF;
+  background-color: var(--primary-700);
+  color: var(--text-inverse);
 }
 
 .navItemInactive {
   background-color: transparent;
-  color: #FFFFFF;
+  color: var(--text-inverse);
 }
 
 .navItemInactive:hover {
-  background-color: #B85C25;
-  color: #FFFFFF;
+  background-color: var(--primary-700);
+  color: var(--text-inverse);
 }
 
 .rightSection {
@@ -83,8 +83,8 @@
   font-size: 0.875rem;
   font-weight: 500;
   padding: 0.75rem 1rem;
-  background-color: #CA3131;
-  color: #FFFFFF;
+  background-color: var(--error-600);
+  color: var(--text-inverse);
   border: none;
   cursor: pointer;
   transition: background-color 0.3s ease;
@@ -92,7 +92,7 @@
 }
 
 .logoutBtn:hover {
-  background-color: #A02828;
+  background-color: var(--error-700);
 }
 
 /* Responsive adjustments */

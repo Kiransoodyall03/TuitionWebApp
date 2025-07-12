@@ -2,7 +2,7 @@
 
 .login {
   overflow: hidden;
-  background-color: white;
+  background-color: var(--bg-primary);
   padding: 40px 30px 30px 30px;
   border-radius: 10px;
   position: absolute;
@@ -11,7 +11,7 @@
   width: 400px;
   transform: translate(-50%, -50%);
   transition: transform 300ms, box-shadow 300ms;
-  box-shadow: 5px 10px 10px rgba(57, 0, 87, 0.2);
+  box-shadow: var(--shadow-lg);
   font-family: 'Asap', sans-serif;
 }
 
@@ -31,14 +31,14 @@
 .login::before {
   left: 40%;
   bottom: -130%;
-  background-color: rgba(167, 45, 255, 0.15);
+  background-color: var(--secondary-200);
   animation: wawes 6s infinite linear;
 }
 
 .login::after {
   left: 35%;
   bottom: -125%;
-  background-color: rgba(57, 0, 87, 0.2);
+  background-color: var(--primary-200);
   animation: wawes 7s infinite;
 }
 
@@ -47,17 +47,24 @@
   display: block;
   border-radius: 5px;
   font-size: 16px;
-  background: white;
+  background: var(--bg-primary);
   width: 100%;
-  border: 0;
+  border: 1px solid var(--border-primary);
   padding: 10px 10px;
   margin: 15px -10px;
+  color: var(--text-primary);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px rgba(26, 194, 255, 0.1);
 }
 
 .button {
   font-family: 'Asap', sans-serif;
   cursor: pointer;
-  color: #fff;
+  color: var(--text-inverse);
   font-size: 16px;
   text-transform: uppercase;
   width: 80px;
@@ -66,12 +73,17 @@
   margin-top: 10px;
   margin-left: -5px;
   border-radius: 5px;
-  background-color: rgb(132, 63, 130);
+  background-color: var(--primary-500);
   transition: background-color 300ms;
 }
 
 .button:hover {
-  background-color: rgb(119, 57, 117); /* Slightly darker version of redFire */
+  background-color: var(--primary-600);
+}
+
+.button:disabled {
+  background-color: var(--neutral-400);
+  cursor: not-allowed;
 }
 
 @keyframes wawes {
@@ -85,7 +97,7 @@
 
 .link {
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-tertiary);
   position: absolute;
   right: 10px;
   bottom: 10px;
@@ -94,7 +106,7 @@
 
 .heading {
   text-align: center;
-  color: rgb(57, 0, 87);
+  color: var(--text-primary);
   font-size: 3rem;
   margin-top: 60px;
   font-family: 'Asap', sans-serif;
@@ -102,6 +114,17 @@
 
 /* Body styles - you'll need to apply these globally in your main CSS file */
 .body {
-  background-color: rgb(132, 63, 130);
+  background-color: var(--bg-primary);
   font-family: 'Asap', sans-serif;
+}
+
+/* Error message styles */
+.error {
+  background-color: var(--error-50);
+  border: 1px solid var(--error-200);
+  color: var(--error-700);
+  padding: 12px 16px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  font-size: 14px;
 }

@@ -2,11 +2,11 @@ import React, { useState, useCallback } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import styles from './Calendar.module.css';
+import styles from './calendarTutor.module.css';
 
 const localizer = momentLocalizer(moment);
 
-const StudentCalendar = () => {
+const TutorCalendar = () => {
   const [events, setEvents] = useState([
     {
       id: 1,
@@ -160,4 +160,4 @@ const StudentCalendar = () => {
   );
 };
 
-export default StudentCalendar;
+export default TutorCalendar;
