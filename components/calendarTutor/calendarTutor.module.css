@@ -1,0 +1,196 @@
+/* calendarTutor.module.css */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.instructions {
+  background-color: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-secondary);
+}
+
+.instructionsTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.instructionsList {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: var(--text-secondary);
+}
+
+.instructionsList li {
+  margin-bottom: 0.25rem;
+}
+
+/* CRITICAL: Calendar wrapper needs proper height and display */
+.calendarWrapper {
+  background-color: var(--bg-primary);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 1rem;
+  
+  /* These are crucial for proper calendar display */
+  min-height: 600px;
+  height: 600px;
+  display: block;
+  overflow: hidden;
+}
+
+/* Override react-big-calendar styles if needed */
+.calendarWrapper :global(.rbc-calendar) {
+  height: 100% !important;
+  font-family: inherit;
+}
+
+.calendarWrapper :global(.rbc-header) {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-primary);
+  padding: 0.5rem;
+  font-weight: 600;
+}
+
+.calendarWrapper :global(.rbc-today) {
+  background-color: var(--primary-50);
+}
+
+.calendarWrapper :global(.rbc-off-range-bg) {
+  background-color: var(--neutral-100);
+}
+
+.calendarWrapper :global(.rbc-date-cell) {
+  color: var(--text-primary);
+  padding: 0.25rem;
+}
+
+.calendarWrapper :global(.rbc-date-cell.rbc-off-range) {
+  color: var(--text-tertiary);
+}
+
+.calendarWrapper :global(.rbc-month-view) {
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+}
+
+.calendarWrapper :global(.rbc-day-bg) {
+  border-right: 1px solid var(--border-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.calendarWrapper :global(.rbc-day-bg:hover) {
+  background-color: var(--primary-50);
+}
+
+.calendarWrapper :global(.rbc-toolbar) {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+}
+
+.calendarWrapper :global(.rbc-toolbar button) {
+  background-color: var(--primary-500);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  margin: 0 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.calendarWrapper :global(.rbc-toolbar button:hover) {
+  background-color: var(--primary-600);
+}
+
+.calendarWrapper :global(.rbc-toolbar button.rbc-active) {
+  background-color: var(--primary-700);
+}
+
+.calendarWrapper :global(.rbc-toolbar-label) {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.currentEvents {
+  background-color: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-secondary);
+}
+
+.currentEventsTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.eventsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eventItem {
+  padding: 0.5rem;
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  border: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .calendarWrapper :global(.rbc-today) {
+  background-color: var(--primary-900);
+}
+
+[data-theme="dark"] .calendarWrapper :global(.rbc-off-range-bg) {
+  background-color: var(--neutral-800);
+}
+
+[data-theme="dark"] .calendarWrapper :global(.rbc-day-bg:hover) {
+  background-color: var(--primary-900);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .container {
+    padding: 0.5rem;
+  }
+  
+  .calendarWrapper {
+    height: 500px;
+    min-height: 500px;
+    padding: 0.5rem;
+  }
+  
+  .calendarWrapper :global(.rbc-toolbar) {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .calendarWrapper :global(.rbc-toolbar button) {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+  }
+}

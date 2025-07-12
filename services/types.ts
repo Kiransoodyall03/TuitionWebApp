@@ -53,6 +53,7 @@ export interface Student {
         currentMark: number;
         targetMark: number;
     }[];
+    tutorIds: string[];
     parentId: string;
     parentName: string;
     parentContactNumber: string;
