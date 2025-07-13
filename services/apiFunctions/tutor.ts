@@ -1,5 +1,5 @@
 // services/apiFunctions/useTutor.ts
-import { collection, query, where, getDocs, getDoc, doc } from "@firebase/firestore";
+import { collection, query, where, updateDoc, getDocs, getDoc, doc, deleteDoc } from "@firebase/firestore";
 import { db } from "../firebase/config";
 import { Booking, Lesson, Student, Tutor } from "../types";
 import { useUserContext } from "../userContext";
@@ -33,6 +33,31 @@ export const useTutor = () => {
       return [];
     }
   }, []);
+  const confirmBooking = useCallback(async (bookingId: string): Promise<boolean> => {
+  try {
+    const bookingRef = doc(db, "bookings", bookingId);
+    await updateDoc(bookingRef, {
+      confirmed: true,
+      confirmedAt: new Date(), // Optional: track when it was confirmed
+    });
+    return true;
+  } catch (error) {
+    console.error('Error confirming booking:', error);
+    throw new Error('Failed to confirm booking');
+  }
+}, []);
+
+const deleteBooking = useCallback(async (bookingId: string): Promise<boolean> => {
+  try {
+    // Option 1: Delete the booking entirely
+    const bookingRef = doc(db, "bookings", bookingId);
+    await deleteDoc(bookingRef);
+    return true;
+  } catch (error) {
+    console.error('Error deleting booking:', error);
+    throw new Error('Failed to delete booking');
+  }
+}, []);
 
 // services/apiFunctions/useTutor.ts
 const fetchTutorStudents = useCallback(async (tutorId: string): Promise<Student[]> => {
@@ -92,6 +117,8 @@ const fetchTutorStudents = useCallback(async (tutorId: string): Promise<Student[
     fetchTutorBookings,
     fetchTutorStudents,
     fetchTutorLessons,
+    confirmBooking,
+    deleteBooking,
   }), [
     fetchTutor,
     fetchTutorBookings,

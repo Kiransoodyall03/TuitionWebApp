@@ -12,6 +12,7 @@ export interface Booking {
     subject: string;
     extraDetails: string;
     confirmed: boolean;
+    meetingLink?: string; // Optional field for meeting link
 }
 
 export interface Lesson {
