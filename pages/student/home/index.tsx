@@ -1,14 +1,11 @@
-import React, { useState, useCallback } from 'react';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { Student } from '../../../services/types';
+import React, { useState, useEffect } from 'react';
+import { Student, Lesson, Booking } from '../../../services/types';
 import { useUserContext } from '../../../services/userContext';
+import { useStudent } from '../../../services/apiFunctions/student';
+import StudentCalendar from '../../../components/calendarStudent';
+import moment from 'moment';
 
 import styles from './StudentHome.module.css';
-
-
-const localizer = momentLocalizer(moment);
 
 type StudentHomeProps = {
   navigation?: any;
@@ -16,187 +13,234 @@ type StudentHomeProps = {
 
 export const StudentHome = ({ navigation }: StudentHomeProps) => {
   const { user, userType } = useUserContext();
+  const { fetchStudentLessons } = useStudent();
+  
   if (userType !== 'student' || !user) return <div>Not a Student.</div>;
   const student = user as Student;
 
-  // Calendar state
-  const [events, setEvents] = useState([
-    {
-      id: 1,
-      title: 'Math Tutoring',
-      start: new Date(2024, 6, 10, 10, 0),
-      end: new Date(2024, 6, 10, 11, 0),
-      type: 'tutoring',
-      clickable: true
-    },
-    {
-      id: 2,
-      title: 'Study Group',
-      start: new Date(2024, 6, 12, 14, 0),
-      end: new Date(2024, 6, 12, 15, 30),
-      type: 'study',
-      clickable: true
-    },
-    {
-      id: 3,
-      title: 'Assignment Due',
-      start: new Date(2024, 6, 15, 23, 59),
-      end: new Date(2024, 6, 15, 23, 59),
-      type: 'deadline',
-      clickable: true
-    }
-  ]);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
+  const [calendarKey, setCalendarKey] = useState(0); // For forcing calendar refresh
+  const [isLoadingStats, setIsLoadingStats] = useState(false); // Prevent multiple calls
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  
+  // State for dashboard statistics
+  const [dashboardStats, setDashboardStats] = useState({
+    upcomingLessons: 0,
+    completedThisMonth: 0,
+    studyHours: 24, // This might come from a different source
+    upcomingDeadlines: 2 // This might come from a different source
+  });
 
-  // Custom event component with interactable elements
-  const CustomEvent = ({ event }) => {
-    const handleEventClick = (e) => {
-      e.stopPropagation();
-      console.log('Event clicked:', event);
-      // Here you would open your modal or handle the interaction
-      alert(`Clicked on: ${event.title}`);
-    };
+  // Calculate dashboard statistics from lessons
+  useEffect(() => {
+    const calculateStats = async () => {
+      if (isLoadingStats) return; // Prevent multiple simultaneous calls
+      
+      try {
+        setIsLoadingStats(true);
+        const lessons = await fetchStudentLessons(student.studentId);
+        
+        const now = new Date();
+        const startOfWeek = moment().startOf('week').toDate();
+        const endOfWeek = moment().endOf('week').toDate();
+        const startOfMonth = moment().startOf('month').toDate();
+        const endOfMonth = moment().endOf('month').toDate();
 
-    const getEventStyle = (type) => {
-      const baseStyle = {
-        padding: '2px 8px',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        border: 'none',
-        fontSize: '12px',
-        fontWeight: '500',
-        transition: 'all 0.2s ease',
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      };
+        // Count upcoming lessons this week
+        const upcomingLessons = lessons.filter(lesson => {
+          const lessonDate = new Date(
+            lesson.date.year,
+            lesson.date.month - 1,
+            lesson.date.day,
+            lesson.date.hour,
+            lesson.date.minute
+          );
+          return lessonDate >= now && 
+                 lessonDate >= startOfWeek && 
+                 lessonDate <= endOfWeek && 
+                 lesson.lessonStatus === 'scheduled';
+        }).length;
 
-      switch (type) {
-        case 'tutoring':
-          return { ...baseStyle, backgroundColor: '#f59e0b', color: 'white' }; // Orange for tutoring
-        case 'study':
-          return { ...baseStyle, backgroundColor: '#10b981', color: 'white' }; // Green for study
-        case 'deadline':
-          return { ...baseStyle, backgroundColor: '#ef4444', color: 'white' }; // Red for deadlines
-        default:
-          return { ...baseStyle, backgroundColor: '#6b7280', color: 'white' };
+        // Count completed lessons this month
+        const completedThisMonth = lessons.filter(lesson => {
+          const lessonDate = new Date(
+            lesson.date.year,
+            lesson.date.month - 1,
+            lesson.date.day,
+            lesson.date.hour,
+            lesson.date.minute
+          );
+          return lessonDate >= startOfMonth && 
+                 lessonDate <= endOfMonth && 
+                 lesson.lessonStatus === 'completed';
+        }).length;
+
+        setDashboardStats(prev => ({
+          ...prev,
+          upcomingLessons,
+          completedThisMonth
+        }));
+      } catch (error) {
+        console.error('Error calculating dashboard stats:', error);
+      } finally {
+        setIsLoadingStats(false);
       }
     };
 
-    return (
-      <button
-        style={getEventStyle(event.type)}
-        onClick={handleEventClick}
-        onMouseOver={(e) => {
-          (e.target as HTMLButtonElement).style.opacity = '0.8';
-        }}
-        onMouseOut={(e) => {
-          (e.target as HTMLButtonElement).style.opacity = '1';
-        }}
-      >
-        {event.title}
-      </button>
-    );
+    calculateStats();
+  }, [student.studentId, calendarKey]); // Removed fetchStudentLessons from dependencies
+
+  // Handle when a lesson is clicked in the calendar - same pattern as TutorHome
+  const handleLessonClick = (booking: Booking) => {
+    setSelectedBooking(booking);
+    if (booking.confirmed) {
+      setIsBookingModalOpen(true);
+    } else {
+      setIsConfirmModalOpen(true);
+    }
   };
 
-  // Handle clicking on empty calendar slots
-  const handleSelectSlot = useCallback((slotInfo) => {
-    const title = window.prompt('Enter event title:');
-    if (title) {
-      const newEvent = {
-        id: Date.now(),
-        title,
-        start: slotInfo.start,
-        end: slotInfo.end,
-        type: 'study',
-        clickable: true
-      };
-      setEvents(prev => [...prev, newEvent]);
-    }
-  }, []);
+  const handleCloseLessonModal = () => {
+    setIsLessonModalOpen(false);
+    setSelectedLesson(null);
+  };
 
-  // Handle selecting existing events
-  const handleSelectEvent = useCallback((event) => {
-    console.log('Selected event:', event);
-    // This is where you'd open your modal
-    alert(`Selected: ${event.title}`);
-  }, []);
+  const handleJoinLesson = () => {
+    // Add your join lesson logic here - same as tutor
+    console.log('Joining lesson:', selectedLesson);
+    // You might want to redirect to a meeting platform or open a new window
+    alert('Joining lesson...');
+  };
+
+  // Format the lesson data for the modal - similar to TutorHome's formatBookingForModal
+  const formatLessonForModal = (lesson: Lesson) => {
+    if (!lesson) return {};
+
+    const { date } = lesson;
+    const lessonDate = new Date(date.year, date.month - 1, date.day, date.hour, date.minute);
+    const endDate = new Date(lessonDate.getTime() + 60 * 60 * 1000); // Assuming 1 hour duration
+
+    return {
+      status: lesson.lessonStatus,
+      time: `${moment(lessonDate).format('h:mm A')} - ${moment(endDate).format('h:mm A')}, ${moment(lessonDate).format('MMMM D, YYYY')}`,
+      notes: lesson.notes || 'No notes available',
+      lessonId: lesson.lessonId,
+      bookingId: lesson.bookingId,
+    };
+  };
 
   return (
     <div className="flex-1 bg-white p-8">
+      {/* — Info boxes — */}
       <div className={styles.container}>    
         <div className={styles.infoBoxes}>
           <div className={styles.box}>
             <h2>Upcoming Lessons</h2>
-            <p>3 this week.</p>
+            <p>{dashboardStats.upcomingLessons} this week.</p>
           </div>
           <div className={styles.box}>
             <h2>Completed</h2>
-            <p>12 this month.</p>
+            <p>{dashboardStats.completedThisMonth} this month.</p>
           </div>
           <div className={styles.box}>
             <h2>Study Hours</h2>
-            <p>24 this week.</p>
+            <p>{dashboardStats.studyHours} this week.</p>
           </div>
-
           <div className={styles.box}>
             <h2>Deadlines</h2>
-            <p>2 up coming.</p>
+            <p>{dashboardStats.upcomingDeadlines} upcoming.</p>
           </div>
         </div>
       </div>
 
+      {/* — Calendar Section — */}
       <div className="max-w-6xl mx-auto">
+        <StudentCalendar key={calendarKey} onLessonClick={handleLessonClick} />
+      </div>
 
-        {/* Calendar Section */}
-        <div className="bg-gray-50 p-6 rounded-lg border mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">My Schedule</h2>
-            <div className="flex gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-orange-500 rounded"></div>
-                <span>Tutoring</span>
+      {/* Lesson Details Modal - Custom modal for student lessons */}
+      {selectedLesson && (
+        <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
+          isLessonModalOpen ? 'block' : 'hidden'
+        }`}>
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Lesson Details</h2>
+              <button
+                onClick={handleCloseLessonModal}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Status */}
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="font-medium text-gray-700">Status:</span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  selectedLesson.lessonStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                  selectedLesson.lessonStatus === 'scheduled' ? 'bg-purple-100 text-purple-800' :
+                  selectedLesson.lessonStatus === 'cancelled' ? 'bg-red-100 text-red-800' :
+                  'bg-orange-100 text-orange-800'
+                }`}>
+                  {selectedLesson.lessonStatus.charAt(0).toUpperCase() + selectedLesson.lessonStatus.slice(1)}
+                </span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-green-500 rounded"></div>
-                <span>Study</span>
+
+              {/* Time */}
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="font-medium text-gray-700">Time:</span>
+                <span className="text-gray-900">{formatLessonForModal(selectedLesson).time}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-red-500 rounded"></div>
-                <span>Deadline</span>
+
+              {/* Lesson ID */}
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="font-medium text-gray-700">Lesson ID:</span>
+                <span className="text-gray-900 font-mono text-sm">{selectedLesson.lessonId}</span>
               </div>
+
+              {/* Booking ID */}
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="font-medium text-gray-700">Booking ID:</span>
+                <span className="text-gray-900 font-mono text-sm">{selectedLesson.bookingId}</span>
+              </div>
+
+              {/* Notes */}
+              {selectedLesson.notes && (
+                <div className="p-3 bg-gray-50 rounded">
+                  <span className="font-medium text-gray-700 block mb-2">Notes:</span>
+                  <div className="text-gray-900 bg-white p-3 rounded border">
+                    {selectedLesson.notes}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              {selectedLesson.lessonStatus === 'scheduled' && (
+                <button
+                  onClick={handleJoinLesson}
+                  className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  Join Lesson
+                </button>
+              )}
+              
+              <button
+                onClick={handleCloseLessonModal}
+                className="flex-1 bg-gray-200 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Close
+              </button>
             </div>
           </div>
-
-          <div style={{ height: '500px' }}>
-            <Calendar
-              localizer={localizer}
-              events={events}
-              startAccessor="start"
-              endAccessor="end"
-              style={{ height: '100%' }}
-              onSelectEvent={handleSelectEvent}
-              onSelectSlot={handleSelectSlot}
-              selectable={true}
-              components={{
-                event: CustomEvent
-              }}
-              eventPropGetter={(event) => ({
-                style: {
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  padding: '0'
-                }
-              })}
-            />
-          </div>
-
-          <div className="mt-4 text-sm text-gray-600">
-            <p>💡 Click on any event to interact with it, or click on empty slots to create new events</p>
-          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
