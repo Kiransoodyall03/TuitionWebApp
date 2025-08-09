@@ -5,7 +5,7 @@ import { useUserContext } from '../../../services/userContext';
 import { useTutor } from '../../../services/apiFunctions/tutor';
 import { Tutor, Booking } from '../../../services/types';
 import TutorCalendar from '../../../components/calendarTutor';
-import BookingDetailsModal from '../../../components/BookingModal';
+import BookingDetailsModal from '../../../components/BookingModalTutor';
 import ConfirmBookingModal from '../../../components/confirmationModal'; // Adjust path as needed
 import styles from './TutorHome.module.css';
 import moment from 'moment';
