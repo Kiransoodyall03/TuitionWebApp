@@ -2,6 +2,7 @@
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './login';
+import RegistrationPage from './register'; // Add this import
 import { StudentHome } from './student/home';
 import { StudentProfile } from './student/profile';
 import { TutorHome } from './tutor/home';
@@ -12,9 +13,9 @@ import { ProtectedRoute } from '../components/ProtectedRoute';
 import '../color.css'
 
 const AppContent: React.FC = () => {
-  const { user, userType, logout, isLoading } = useUserContext();
+  const { user, userType, signOut, isLoading, userProfile } = useUserContext();
 
-  // Show loading spinner while checking cookies
+  // Show loading spinner while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--neutral-100)' }}>
@@ -40,11 +41,11 @@ const AppContent: React.FC = () => {
               { key: 'Profile', label: 'Profile', path: '/profile' },
             ]}
             userName={
-              userType === 'student' 
-                ? (user as any).username || (user as any).name || 'Student'
-                : (user as any).username || (user as any).name || 'Tutor'
+              userProfile?.displayName || 
+              (user as any).displayName || 
+              (userType === 'student' ? 'Student' : 'Tutor')
             }
-            onLogout={logout}
+            onLogout={signOut}
           />
         )}
         
@@ -58,6 +59,18 @@ const AppContent: React.FC = () => {
                   <Navigate to="/home" replace />
                 ) : (
                   <LoginPage />
+                )
+              } 
+            />
+            
+            {/* Registration Route */}
+            <Route 
+              path="/register" 
+              element={
+                userType && user ? (
+                  <Navigate to="/home" replace />
+                ) : (
+                  <RegistrationPage />
                 )
               } 
             />

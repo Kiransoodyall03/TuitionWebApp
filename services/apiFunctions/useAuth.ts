@@ -12,14 +12,25 @@ export const useAuth = () => {
     setError(null);
   };
 
-  const createBooking = async (booking: Booking) => {
-    try {
-      const bookingCollection = collection(db, "bookings");
-      await addDoc(bookingCollection, booking);
-      console.log("Booking created successfully:", booking);
-    } catch (err) {
-      console.error("Error creating booking:", err);
+  const createBooking = async (payload: Booking & { durationMinutes?: number }): Promise<Booking> => {
+    const res = await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      let msg = `Request failed: ${res.status}`;
+      try {
+        const txt = await res.text();
+        msg = txt || msg;
+      } catch {}
+      throw new Error(msg);
     }
+
+    const json = await res.json();
+    const returned: Booking = (json?.booking ?? json) as Booking;
+    return returned;
   };
 
   const convertBookingToLesson = async (booking: Booking): Promise<Lesson | null> => {

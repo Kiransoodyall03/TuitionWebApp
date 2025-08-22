@@ -119,3 +119,145 @@
   background-color: #7dd3fc;
   cursor: not-allowed;
 }
+/* Add these styles to your existing confirmationModal.module.css */
+
+/* Teams Result Container */
+.teamsResult {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+
+.teamsResult.success {
+  background-color: #f0f9f0;
+  border-color: #4caf50;
+}
+
+.teamsResult.error {
+  background-color: #fef7f7;
+  border-color: #f44336;
+}
+
+/* Success Message */
+.successMessage {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.successIcon {
+  color: #4caf50;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.teamsTitle {
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: #2e7d32;
+}
+
+.teamsSubtext {
+  margin: 0 0 12px 0;
+  color: #555;
+  font-size: 14px;
+}
+
+/* Teams Button */
+.teamsButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #6264a7;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.teamsButton:hover {
+  background-color: #5558a3;
+}
+
+.teamsButton:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Error Message */
+.errorMessage {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.errorIcon {
+  color: #f44336;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.errorMessage .teamsTitle {
+  color: #d32f2f;
+}
+
+.errorMessage .teamsSubtext {
+  color: #666;
+}
+
+/* Reconnect Button */
+.reconnectButton {
+  background-color: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.reconnectButton:hover {
+  background-color: #f57c00;
+}
+
+/* Loading Message */
+.loadingMessage {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  margin: 16px 0;
+  color: #666;
+}
+
+/* Loading Spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #6264a7;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Update existing confirm button text */
+.confirmButton {
+  background-color: #6264a7;
+  color: white;
+}
+
+.confirmButton:hover:not(:disabled) {
+  background-color: #5558a3;
+}

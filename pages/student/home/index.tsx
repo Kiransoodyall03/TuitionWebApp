@@ -13,11 +13,36 @@ type StudentHomeProps = {
 };
 
 export const StudentHome = ({ navigation }: StudentHomeProps) => {
-  const { user, userType } = useUserContext();
+  // Get auth user + app profiles from context (don't cast firebase User -> Student)
+  const { user, userType, userProfile, studentProfile } = useUserContext();
   const { fetchStudentLessons } = useStudent();
 
   if (userType !== 'student' || !user) return <div>Not a Student.</div>;
-  const student = user as Student;
+
+  // Derive studentId from studentProfile (preferred) or fallback to userProfile.uid
+  const studentId = studentProfile?.userId ?? userProfile?.uid ?? '';
+
+  // Prepare a minimal Student object for the modal (safe defaults)
+  const studentForModal: Student = {
+    studentId,
+    username: userProfile?.displayName ?? '',
+    password: '',
+    role: 'student',
+    grade: String(studentProfile?.grade ?? 12),
+    email: userProfile?.email,
+    subjects: (studentProfile?.subjects ?? []).map(s => ({
+      subjectName: s,
+      tutorId: '',
+      currentMark: 0,
+      targetMark: 0
+    })),
+    tutorIds: [],
+    parentId: '',
+    parentName: '',
+    parentContactNumber: '',
+    parentEmail: '',
+    tokens: 0
+  };
 
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -31,13 +56,14 @@ export const StudentHome = ({ navigation }: StudentHomeProps) => {
     upcomingDeadlines: 2
   });
 
-  // Stats (unchanged)
+  // Stats
   useEffect(() => {
     const calculateStats = async () => {
       if (isLoadingStats) return;
       try {
         setIsLoadingStats(true);
-        const lessons = await fetchStudentLessons(student.studentId);
+        // use derived studentId
+        const lessons = await fetchStudentLessons(studentId);
 
         const now = new Date();
         const startOfWeek = moment().startOf('week').toDate();
@@ -88,8 +114,13 @@ export const StudentHome = ({ navigation }: StudentHomeProps) => {
       }
     };
 
-    calculateStats();
-  }, [student.studentId, calendarKey]);
+    if (studentId) {
+      calculateStats();
+    } else {
+      // If no studentId yet, reset stats
+      setDashboardStats(prev => ({ ...prev, upcomingLessons: 0, completedThisMonth: 0 }));
+    }
+  }, [studentId, calendarKey]);
 
   // Parent booking click handler — receives Booking from StudentCalendar
   const handleBookingClick = (booking: Booking) => {
@@ -162,7 +193,7 @@ export const StudentHome = ({ navigation }: StudentHomeProps) => {
       {isBookingModalOpen && selectedBooking && (
         <BookingModalStudent
           booking={selectedBooking}
-          student={student}
+          student={studentForModal}
           onClose={handleCloseBookingModal}
           onJoin={handleJoinBooking}
         />
