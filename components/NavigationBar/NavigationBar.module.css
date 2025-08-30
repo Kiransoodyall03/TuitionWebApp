@@ -1,0 +1,117 @@
+/* NavigationBar.module.css */
+
+.navContainer {
+  background-color: var(--primary-600);
+  box-shadow: var(--shadow-md);
+  border-bottom: 1px solid var(--primary-700);
+  font-family: 'Asap', sans-serif;
+}
+
+.navWrapper {
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.navInner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 4rem;
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+}
+
+.welcomeText {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-inverse);
+  margin-right: 2rem;
+  padding: 0.75rem 1rem;
+}
+
+.navLinks {
+  display: flex;
+  gap: 0;
+}
+
+.navItem {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-inverse);
+  text-decoration: none;
+  border-right: 1px solid var(--primary-700);
+  transition: background-color 0.3s ease;
+  min-height: 4rem;
+}
+
+.navItem:last-child {
+  border-right: none;
+}
+
+.navItemActive {
+  background-color: var(--primary-700);
+  color: var(--text-inverse);
+}
+
+.navItemInactive {
+  background-color: transparent;
+  color: var(--text-inverse);
+}
+
+.navItemInactive:hover {
+  background-color: var(--primary-700);
+  color: var(--text-inverse);
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+}
+
+.logoutBtn {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+  background-color: var(--error-600);
+  color: var(--text-inverse);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  min-height: 4rem;
+}
+
+.logoutBtn:hover {
+  background-color: var(--error-700);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .welcomeText {
+    display: none;
+  }
+  
+  .navLinks {
+    gap: 0;
+  }
+  
+  .navItem {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .logoutBtn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+}
