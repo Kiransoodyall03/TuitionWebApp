@@ -1,10 +1,11 @@
-// pages/api/auth/microsoft/callback.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore } from '../../../../lib/firebaseAdmin';
+// functions/src/auth/callback.ts
+import {Request, Response} from 'express';
+import * as admin from 'firebase-admin';
 
 const MICROSOFT_CLIENT_ID = process.env.AZURE_CLIENT_ID;
 const MICROSOFT_CLIENT_SECRET = process.env.AZURE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI;
+const REDIRECT_URI = process.env.AZURE_REDIRECT_URI;
+const FRONTEND_URL = process.env.FRONTEND_URI;
 
 interface TokenResponse {
   access_token: string;
@@ -14,29 +15,30 @@ interface TokenResponse {
   token_type: string;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+const getFirestore = () => admin.firestore();
+
+export async function microsoftCallback(req: Request, res: Response): Promise<void> {
   if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method not allowed' });
+    res.status(405).json({ message: 'Method not allowed' });
+    return;
   }
 
   const { code, state, error } = req.query;
 
   if (error) {
     console.error('Microsoft OAuth error:', error);
-    return res.redirect(`/#/profile?error=${error}`);
+    res.redirect(`${FRONTEND_URL}/#/profile?error=${error}`);
+    return;
   }
 
   if (!code || !state) {
-    return res.redirect('/#/profile?error=missing_code_or_state');
+    res.redirect(`${FRONTEND_URL}/#/profile?error=missing_code_or_state`);
+    return;
   }
 
   const tutorId = state as string;
 
   try {
-    // Exchange authorization code for tokens
     const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
       method: 'POST',
       headers: {
@@ -60,7 +62,6 @@ export default async function handler(
 
     const tokens: TokenResponse = await tokenResponse.json();
 
-    // Get user info from Microsoft Graph
     const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
       headers: {
         'Authorization': `Bearer ${tokens.access_token}`,
@@ -73,7 +74,6 @@ export default async function handler(
 
     const userInfo = await userResponse.json();
 
-    // Store tokens and user info in Firestore
     const db = getFirestore();
     await db.collection('tutors').doc(tutorId).set({
       microsoftAuth: {
@@ -92,12 +92,10 @@ export default async function handler(
     }, { merge: true });
 
     console.log(`Microsoft account connected for tutor ${tutorId}:`, userInfo.mail);
-
-    // Redirect back to settings with success message
-    res.redirect('/#/profile?microsoft=connected');
+    res.redirect(`${FRONTEND_URL}/#/profile?microsoft=connected`);
 
   } catch (error) {
     console.error('Error in Microsoft OAuth callback:', error);
-    res.redirect('/#/profile?error=connection_failed');
+    res.redirect(`${FRONTEND_URL}/#/profile?error=connection_failed`);
   }
 }

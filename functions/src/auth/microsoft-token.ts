@@ -1,32 +1,33 @@
-// pages/api/auth/microsoft-token.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore } from '../../../../services/firebase/admin';
+import {Request, Response} from 'express';
+import * as functions from 'firebase-functions';
+import * as admin from 'firebase-admin';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+const config = functions.config();
+const getFirestore = () => admin.firestore();
+
+export async function microsoftToken(req: Request, res: Response): Promise<void> {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
   const { userId, authCode } = req.body;
 
   if (!userId || !authCode) {
-    return res.status(400).json({ error: 'Missing userId or authCode' });
+    res.status(400).json({ error: 'Missing userId or authCode' });
+    return;
   }
 
   try {
     console.log('[microsoft-token] Exchanging auth code for tokens...');
     
-    // Exchange authorization code for tokens
     const tokenEndpoint = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
     
     const params = new URLSearchParams({
-      client_id: process.env.MICROSOFT_CLIENT_ID || '',
-      client_secret: process.env.MICROSOFT_CLIENT_SECRET || '',
+      client_id: config.azure?.client_id || '',
+      client_secret: config.azure?.client_secret || '',
       code: authCode,
-      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      redirect_uri: `${config.frontend?.url}/auth/callback`,
       grant_type: 'authorization_code',
       scope: 'User.Read Calendars.ReadWrite OnlineMeetings.ReadWrite offline_access'
     });
@@ -42,24 +43,25 @@ export default async function handler(
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error('[microsoft-token] Token exchange failed:', errorText);
-      return res.status(400).json({ 
+      res.status(400).json({ 
         error: 'Failed to exchange authorization code',
         details: errorText 
       });
+      return;
     }
 
     const tokens = await tokenResponse.json();
     
     if (!tokens.access_token || !tokens.refresh_token) {
       console.error('[microsoft-token] Missing tokens in response');
-      return res.status(400).json({ 
+      res.status(400).json({ 
         error: 'Invalid token response',
         hasAccess: !!tokens.access_token,
         hasRefresh: !!tokens.refresh_token
       });
+      return;
     }
 
-    // Get user info from Microsoft Graph
     const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
       headers: {
         'Authorization': `Bearer ${tokens.access_token}`
@@ -83,7 +85,6 @@ export default async function handler(
       };
     }
 
-    // Save tokens to Firestore
     const db = getFirestore();
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000)).toISOString();
     
@@ -100,7 +101,7 @@ export default async function handler(
 
     console.log('[microsoft-token] Tokens saved successfully');
 
-    return res.status(200).json({ 
+    res.status(200).json({ 
       success: true,
       message: 'Microsoft account connected successfully',
       userInfo: userInfo
@@ -108,7 +109,7 @@ export default async function handler(
 
   } catch (error: any) {
     console.error('[microsoft-token] Error:', error);
-    return res.status(500).json({ 
+    res.status(500).json({ 
       error: 'Internal server error',
       message: error.message 
     });

@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Remove static export since we're using Firebase Functions
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
+  
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -16,6 +22,11 @@ const nextConfig = {
       };
     }
     return config;
+  },
+  
+  // Disable features that don't work with static export
+  experimental: {
+    esmExternals: 'loose',
   },
 };
 

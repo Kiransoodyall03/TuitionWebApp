@@ -1,18 +1,19 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore } from '../../../../lib/firebaseAdmin';
+import {Request, Response} from 'express';
+import * as admin from 'firebase-admin';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+const getFirestore = () => admin.firestore();
+
+export async function microsoftStatus(req: Request, res: Response): Promise<void> {
   if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method not allowed' });
+    res.status(405).json({ message: 'Method not allowed' });
+    return;
   }
 
   const { tutorId } = req.query;
 
   if (!tutorId) {
-    return res.status(400).json({ message: 'Tutor ID is required' });
+    res.status(400).json({ message: 'Tutor ID is required' });
+    return;
   }
 
   try {
@@ -20,26 +21,27 @@ export default async function handler(
     const tutorDoc = await db.collection('tutors').doc(tutorId as string).get();
     
     if (!tutorDoc.exists) {
-      return res.status(404).json({ message: 'Tutor not found' });
+      res.status(404).json({ message: 'Tutor not found' });
+      return;
     }
     
     const tutorData = tutorDoc.data();
     const microsoftAuth = tutorData?.microsoftAuth;
     
     if (microsoftAuth && microsoftAuth.refreshToken) {
-      return res.json({
+      res.json({
         isConnected: true,
         userInfo: microsoftAuth.userInfo,
         connectedAt: microsoftAuth.connectedAt
       });
     } else {
-      return res.json({
+      res.json({
         isConnected: false
       });
     }
     
   } catch (error) {
     console.error('Error checking Microsoft account status:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error' });
   }
 }

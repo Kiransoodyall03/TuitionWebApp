@@ -1,13 +1,95 @@
-// pages/api/bookings/confirm.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
+// functions/src/bookings/confirm.ts
+import { Request, Response } from 'express';
+import * as admin from 'firebase-admin';
+import * as functions from 'firebase-functions';
 import { Client } from '@microsoft/microsoft-graph-client';
-import { refreshTokenAndGetAccessToken, checkMicrosoftAuthStatus } from '../../../lib/tokenHelpers';
-import { getFirestore } from '../../../lib/firebaseAdmin';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+// Get environment variables from Firebase Functions config
+const config = functions.config();
+
+// Helper function to get Firestore instance
+const getFirestore = () => admin.firestore();
+
+// Helper functions for Microsoft token management
+async function refreshTokenAndGetAccessToken(tutorId: string): Promise<string> {
+  const db = getFirestore();
+  const tutorDoc = await db.collection('tutors').doc(tutorId).get();
+  
+  if (!tutorDoc.exists) {
+    throw new Error('Tutor not found');
+  }
+  
+  const tutorData = tutorDoc.data();
+  const microsoftAuth = tutorData?.microsoftAuth;
+  
+  if (!microsoftAuth?.refreshToken) {
+    throw new Error('No refresh token available - please reconnect your Microsoft account');
+  }
+  
+  // Check if current token is still valid (with 5 min buffer)
+  const expiresAt = new Date(microsoftAuth.expiresAt);
+  const now = new Date();
+  const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+  
+  if (expiresAt > fiveMinutesFromNow && microsoftAuth.accessToken) {
+    return microsoftAuth.accessToken;
+  }
+  
+  // Refresh the token
+  const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      client_id: config.azure?.client_id!,
+      client_secret: config.azure?.client_secret!,
+      refresh_token: microsoftAuth.refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+  
+  if (!tokenResponse.ok) {
+    throw new Error('Token refresh failed - please reconnect your Microsoft account');
+  }
+  
+  const tokens = await tokenResponse.json();
+  
+  // Update stored tokens
+  await db.collection('tutors').doc(tutorId).update({
+    'microsoftAuth.accessToken': tokens.access_token,
+    'microsoftAuth.expiresAt': new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+    'microsoftAuth.lastRefreshed': new Date().toISOString(),
+  });
+  
+  return tokens.access_token;
+}
+
+async function checkMicrosoftAuthStatus(tutorId: string) {
+  const db = getFirestore();
+  const tutorDoc = await db.collection('tutors').doc(tutorId).get();
+  
+  if (!tutorDoc.exists) {
+    return { isConnected: false, needsReconnect: false };
+  }
+  
+  const tutorData = tutorDoc.data();
+  const microsoftAuth = tutorData?.microsoftAuth;
+  
+  if (!microsoftAuth?.refreshToken) {
+    return { isConnected: false, needsReconnect: false };
+  }
+  
+  const expiresAt = new Date(microsoftAuth.expiresAt);
+  const now = new Date();
+  
+  return {
+    isConnected: true,
+    needsReconnect: expiresAt <= now && !microsoftAuth.refreshToken
+  };
+}
+
+export async function confirmBooking(req: Request, res: Response) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
