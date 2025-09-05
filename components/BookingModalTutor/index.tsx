@@ -1,7 +1,5 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { useUserContext } from '../../services/userContext';
-import { Tutor } from '../../services/types';
 import styles from './bookingModal.module.css';
 
 const BookingDetailsModal = ({  
@@ -15,9 +13,6 @@ const BookingDetailsModal = ({
   meetingLink = "",
   onJoinLesson = () => {}
 }) => {
-  const { user, userType } = useUserContext();
-  if (userType !== 'tutor' || !user) return <div>Not a tutor.</div>;
-  const tutor = user as Tutor;
   if (!isOpen) return null;
 
   return (

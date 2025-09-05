@@ -1,10 +1,13 @@
 /* NavigationBar.module.css */
 
 .navContainer {
-  background-color: var(--primary-600);
-  box-shadow: var(--shadow-md);
-  border-bottom: 1px solid var(--primary-700);
-  font-family: 'Asap', sans-serif;
+  background-color: #2563eb; /* Fallback blue color */
+  background-color: var(--primary-600, #2563eb);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
+  border-bottom: 1px solid #1d4ed8;
+  border-bottom: 1px solid var(--primary-700, #1d4ed8);
+  font-family: 'Asap', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .navWrapper {
@@ -30,7 +33,8 @@
 .welcomeText {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text-inverse);
+  color: #ffffff;
+  color: var(--text-inverse, #ffffff);
   margin-right: 2rem;
   padding: 0.75rem 1rem;
 }
@@ -46,11 +50,14 @@
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-inverse);
+  color: #ffffff;
+  color: var(--text-inverse, #ffffff);
   text-decoration: none;
-  border-right: 1px solid var(--primary-700);
+  border-right: 1px solid #1d4ed8;
+  border-right: 1px solid var(--primary-700, #1d4ed8);
   transition: background-color 0.3s ease;
   min-height: 4rem;
+  cursor: pointer;
 }
 
 .navItem:last-child {
@@ -58,18 +65,23 @@
 }
 
 .navItemActive {
-  background-color: var(--primary-700);
-  color: var(--text-inverse);
+  background-color: #1d4ed8;
+  background-color: var(--primary-700, #1d4ed8);
+  color: #ffffff;
+  color: var(--text-inverse, #ffffff);
 }
 
 .navItemInactive {
   background-color: transparent;
-  color: var(--text-inverse);
+  color: #ffffff;
+  color: var(--text-inverse, #ffffff);
 }
 
 .navItemInactive:hover {
-  background-color: var(--primary-700);
-  color: var(--text-inverse);
+  background-color: #1d4ed8;
+  background-color: var(--primary-700, #1d4ed8);
+  color: #ffffff;
+  color: var(--text-inverse, #ffffff);
 }
 
 .rightSection {
@@ -83,16 +95,44 @@
   font-size: 0.875rem;
   font-weight: 500;
   padding: 0.75rem 1rem;
-  background-color: var(--error-600);
-  color: var(--text-inverse);
+  background-color: #dc2626;
+  background-color: var(--error-600, #dc2626);
+  color: #ffffff;
+  color: var(--text-inverse, #ffffff);
   border: none;
   cursor: pointer;
   transition: background-color 0.3s ease;
   min-height: 4rem;
+  font-family: inherit;
 }
 
 .logoutBtn:hover {
-  background-color: var(--error-700);
+  background-color: #b91c1c;
+  background-color: var(--error-700, #b91c1c);
+}
+
+.logoutBtn:focus {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* Dark mode adjustments if needed */
+[data-theme="dark"] .navContainer {
+  background-color: #1e40af;
+  background-color: var(--primary-600, #1e40af);
+  border-bottom-color: #1e3a8a;
+  border-bottom-color: var(--primary-700, #1e3a8a);
+}
+
+[data-theme="dark"] .navItem {
+  border-right-color: #1e3a8a;
+  border-right-color: var(--primary-700, #1e3a8a);
+}
+
+[data-theme="dark"] .navItemActive,
+[data-theme="dark"] .navItemInactive:hover {
+  background-color: #1e3a8a;
+  background-color: var(--primary-700, #1e3a8a);
 }
 
 /* Responsive adjustments */

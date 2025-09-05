@@ -921,3 +921,5 @@ useEffect(() => {
     </div>
   );
 };
+
+export default StudentProfile;

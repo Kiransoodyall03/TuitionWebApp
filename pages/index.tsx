@@ -4,13 +4,13 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './login';
 import RegistrationPage from './register'; // Add this import
 import { StudentHome } from './student/home';
-import { StudentProfile } from './student/profile';
+import  {StudentProfile}  from './student/profile';
 import { TutorHome } from './tutor/home';
 import { TutorProfile } from './tutor/profile';
 import { NavigationBar } from '../components/NavigationBar';
 import { UserProvider, useUserContext } from '../services/userContext';
 import { ProtectedRoute } from '../components/ProtectedRoute';
-import '../color.css'
+
 
 const AppContent: React.FC = () => {
   const { user, userType, signOut, isLoading, userProfile } = useUserContext();
