@@ -1,11 +1,7 @@
 // functions/src/bookings/confirm.ts
 import { Request, Response } from 'express';
 import * as admin from 'firebase-admin';
-import * as functions from 'firebase-functions';
 import { Client } from '@microsoft/microsoft-graph-client';
-
-// Get environment variables from Firebase Functions config
-const config = functions.config();
 
 // Helper function to get Firestore instance
 const getFirestore = () => admin.firestore();
@@ -35,6 +31,14 @@ async function refreshTokenAndGetAccessToken(tutorId: string): Promise<string> {
     return microsoftAuth.accessToken;
   }
   
+  // Get Azure credentials from environment variables
+  const azureClientId = process.env.AZURE_CLIENT_ID;
+  const azureClientSecret = process.env.AZURE_CLIENT_SECRET;
+  
+  if (!azureClientId || !azureClientSecret) {
+    throw new Error('Azure credentials not configured');
+  }
+  
   // Refresh the token
   const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
     method: 'POST',
@@ -42,8 +46,8 @@ async function refreshTokenAndGetAccessToken(tutorId: string): Promise<string> {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      client_id: config.azure?.client_id!,
-      client_secret: config.azure?.client_secret!,
+      client_id: azureClientId,
+      client_secret: azureClientSecret,
       refresh_token: microsoftAuth.refreshToken,
       grant_type: 'refresh_token',
     }),
