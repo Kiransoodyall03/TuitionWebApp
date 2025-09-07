@@ -22,7 +22,6 @@ import type {
   TutorProfile,
   StudentProfile,
   UserContextType,
-  Student,
   Booking,
   Lesson
 } from './types';
@@ -183,7 +182,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   const loadTutorProfile = async (uid: string) => {
     try {
       const tutorDoc = await getDoc(doc(db, 'tutors', uid));
-      if (tutorDoc.exists()) setTutorProfile(tutorDoc.data() as TutorProfile);
+      if (tutorDoc.exists()) setTutorProfile({ ...tutorDoc.data(), uid } as TutorProfile);
     } catch (err) {
       console.error('Error loading tutor profile', err);
     }
@@ -192,7 +191,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   const loadStudentProfile = async (uid: string) => {
     try {
       const studentDoc = await getDoc(doc(db, 'students', uid));
-      if (studentDoc.exists()) setStudentProfile(studentDoc.data() as StudentProfile);
+      if (studentDoc.exists()) setStudentProfile({ ...studentDoc.data(), uid } as StudentProfile);
     } catch (err) {
       console.error('Error loading student profile', err);
     }
@@ -202,7 +201,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     try {
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
-        const data = userDoc.data() as UserProfile;
+        const data = { ...userDoc.data(), uid } as UserProfile;
         setUserProfile(data);
         setUserType(data.userType);
         await updateDoc(doc(db, 'users', uid), { lastLoginAt: serverTimestamp() });
@@ -216,8 +215,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       setError('Failed to load user profile');
     }
   };
-
-// Update this function in your userContext.tsx
 
 const createUserProfile = async (
   firebaseUser: FirebaseUser,
@@ -238,54 +235,48 @@ const createUserProfile = async (
   await setDoc(doc(db, 'users', firebaseUser.uid), profile);
 
   if (uType === 'tutor') {
-    // Create tutor profile
+    // Create tutor profile with proper structure
     const tutorData: TutorProfile = {
-      userId: firebaseUser.uid,
+      uid: firebaseUser.uid,
+      email: firebaseUser.email || '',
+      displayName: firebaseUser.displayName || additionalData.displayName || '',
+      userType: 'tutor' as const,
+      createdAt: serverTimestamp(),
+      lastLoginAt: serverTimestamp(),
       subjects: additionalData.subjects || [],
       bio: additionalData.bio || '',
+      hourlyRate: additionalData.hourlyRate || 0,
       contactNumber: additionalData.contactNumber || '',
-      hourlyRate: additionalData.hourlyRate || 0
+      studentIds: additionalData.studentIds || [],
+      ...(microsoftData ? { microsoftAuth: microsoftData } : {})
     };
     await setDoc(doc(db, 'tutors', firebaseUser.uid), tutorData);
     
   } else if (uType === 'student') {
     // Create student profile with proper structure
     const studentData: StudentProfile = {
-      userId: firebaseUser.uid,
-      subjects: additionalData.subjects || [], // This will be the array of SubjectWithDetails objects
+      uid: firebaseUser.uid,
+      email: firebaseUser.email || '',
+      displayName: firebaseUser.displayName || additionalData.displayName || '',
+      userType: 'student' as const,
+      createdAt: serverTimestamp(),
+      lastLoginAt: serverTimestamp(),
       grade: additionalData.grade || 12,
-      enrolledCourses: additionalData.enrolledCourses || []
+      subjects: additionalData.subjects || [], // This will be SubjectProgress[]
+      tutorIds: additionalData.tutorIds || [],
+      parentName: additionalData.parentName || '',
+      parentEmail: additionalData.parentEmail || '',
+      parentContactNumber: additionalData.parentContactNumber || '',
+      tokens: additionalData.tokens || 0,
+      school: additionalData.school || '',
+      notes: additionalData.notes || '',
+      ...(microsoftData ? { microsoftAuth: microsoftData } : {})
     };
     
-    // Store in StudentProfile collection (simpler structure)
     await setDoc(doc(db, 'students', firebaseUser.uid), studentData);
-    
-    // If you also need the full Student structure (from types.ts), create it too
-    // This seems to be used in other parts of your app
-    if (additionalData.parentName) {
-      const fullStudentData: Partial<Student> = {
-        studentId: firebaseUser.uid,
-        username: additionalData.displayName || firebaseUser.email || '',
-        password: '', // Don't store passwords in Firestore
-        role: 'student',
-        grade: String(additionalData.grade || 12),
-        email: firebaseUser.email || '',
-        contactNumber: additionalData.contactNumber || '',
-        subjects: additionalData.subjects || [], // Array of objects with subjectName, tutorId, currentMark, targetMark
-        tutorIds: additionalData.tutorIds || [],
-        parentId: additionalData.parentId || '',
-        parentName: additionalData.parentName || '',
-        parentContactNumber: additionalData.parentContactNumber || '',
-        parentEmail: additionalData.parentEmail || '',
-        tokens: additionalData.tokens || 0
-      };
-      
-      // You might want to store this in a separate collection or merge with the students collection
-      // Depending on your app's architecture
-      await updateDoc(doc(db, 'students', firebaseUser.uid), fullStudentData);
-    }
   }
 };
+
   const clearError = () => setError(null);
 
   const login = async (email: string, password: string) => {

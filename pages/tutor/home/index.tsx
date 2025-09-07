@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'; // Added useEffect import
+import React, { useState, useEffect } from 'react';
 import { Calendar, MessageSquare, CheckSquare, Clock, Users, BookOpen, Settings, Bell, UserPlus, LucideIcon } from 'lucide-react';
 import { useUserContext } from '../../../services/userContext';
 import { useTutor } from '../../../services/apiFunctions/tutor';
-import { Booking } from '../../../services/types';
+import { Booking, TutorProfile } from '../../../services/types';
 import TutorCalendar from '../../../components/calendarTutor';
 import BookingDetailsModal from '../../../components/BookingModalTutor';
 import ConfirmBookingModal from '../../../components/confirmationModal';
@@ -105,13 +105,15 @@ export const TutorHome: React.FC<TutorHomeProps> = ({ navigation }) => {
   const [totalStudents, setTotalStudents] = useState(0);
   const [statsLoading, setStatsLoading] = useState(true);
 
+  // Updated to use the new types
   const { user, userType, userProfile, tutorProfile } = useUserContext();
   const { 
     fetchWeeklyStatistics,
     calculateTotalStudents
   } = useTutor();
 
-  const tutorId = tutorProfile?.userId || '';
+  // Use the proper TutorProfile type
+  const tutorId = tutorProfile?.uid || '';
 
   // Fetch statistics on component mount
   useEffect(() => {
@@ -158,6 +160,9 @@ export const TutorHome: React.FC<TutorHomeProps> = ({ navigation }) => {
     if (selectedBooking?.meetingLink) {
       console.log('Joining lesson:', selectedBooking.bookingId);
       window.open(selectedBooking.meetingLink, '_blank');
+    } else if (selectedBooking?.teamsJoinUrl) {
+      console.log('Joining Teams lesson:', selectedBooking.bookingId);
+      window.open(selectedBooking.teamsJoinUrl, '_blank');
     } else {
       console.log('No meeting link available for this lesson');
       alert('No meeting link available for this lesson. Please create a Teams meeting first.');
@@ -395,4 +400,3 @@ export const TutorHome: React.FC<TutorHomeProps> = ({ navigation }) => {
 };
 
 export default TutorHome;
-

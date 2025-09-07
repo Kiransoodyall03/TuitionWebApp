@@ -3,7 +3,7 @@ import { X, User, BookOpen, Plus } from 'lucide-react';
 import { collection, query, where, getDocs, updateDoc, doc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase/config';
 import { useUserContext } from '../../services/userContext';
-import { Student, StudentProfile, UserProfile } from '../../services/types';
+import { StudentProfile, UserProfile, SubjectProgress } from '../../services/types';
 import styles from './AddStudentModal.module.css';
 
 interface AddStudentModalProps {
@@ -62,49 +62,44 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSt
       const eligibleStudents: EligibleStudent[] = [];
       
       studentsSnapshot.forEach(doc => {
-        const studentProfile = { ...doc.data(), userId: doc.id } as StudentProfile;
-        const userProfile = usersMap.get(studentProfile.userId);
+        const studentProfile = { ...doc.data(), uid: doc.id } as StudentProfile;
+        const userProfile = usersMap.get(studentProfile.uid);
         
-        console.log('Processing student with userId:', studentProfile.userId);
+        console.log('Processing student with uid:', studentProfile.uid);
         console.log('Found user profile:', userProfile);
         console.log('Student subjects:', studentProfile.subjects);
         
         if (!userProfile) {
-          console.log('No user profile found for student:', studentProfile.userId);
+          console.log('No user profile found for student:', studentProfile.uid);
           return;
         }
         
-        // Ensure student.subjects is an array
-        const studentSubjects = Array.isArray(studentProfile.subjects) ? studentProfile.subjects : [];
+        // Ensure student.subjects is an array and properly typed
+        const studentSubjects: SubjectProgress[] = Array.isArray(studentProfile.subjects) 
+          ? studentProfile.subjects 
+          : [];
         
         // Check if student has any subjects that match tutor's subjects
         // and doesn't already have a tutor assigned for those subjects
         const matchingSubjects = tutorSubjects.filter(tutorSubject => {
           console.log('Checking tutor subject:', tutorSubject);
           
-          // Check if student has this subject
-          const studentHasSubject = studentSubjects.some(s => {
-            // Handle both string and object formats
-            if (typeof s === 'string') {
-              return s.toLowerCase().trim() === tutorSubject.toLowerCase().trim();
-            } else if (typeof s === 'object' && s !== null && 'subjectName' in s) {
-              // It's a full subject object - check if this subject already has a tutor
-              if (s.subjectName.toLowerCase().trim() === tutorSubject.toLowerCase().trim()) {
-                // Return true only if no tutor is assigned
-                return !s.tutorId || s.tutorId === '';
-              }
-            }
-            return false;
+          // Check if student has this subject without a tutor assigned
+          const studentHasAvailableSubject = studentSubjects.some((subjectProgress: SubjectProgress) => {
+            const subjectMatches = subjectProgress.subjectName.toLowerCase().trim() === tutorSubject.toLowerCase().trim();
+            const noTutorAssigned = !subjectProgress.tutorId || subjectProgress.tutorId === '';
+            
+            return subjectMatches && noTutorAssigned;
           });
           
-          return studentHasSubject;
+          return studentHasAvailableSubject;
         });
         
         console.log('Matching subjects for student:', matchingSubjects);
         
         if (matchingSubjects.length > 0) {
           eligibleStudents.push({
-            studentId: studentProfile.userId,
+            studentId: studentProfile.uid,
             studentProfile,
             userProfile,
             availableSubjects: matchingSubjects
@@ -150,29 +145,15 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSt
       }
       
       // Update the student's subjects array to assign the tutor
-      const updatedSubjects = student.studentProfile.subjects.map(subject => {
-        // Handle both string and object formats
-        if (typeof subject === 'string') {
-          // Convert string to object format when assigning tutor
-          if (subject.toLowerCase().trim() === selectedSubject.toLowerCase().trim()) {
-            return {
-              subjectName: subject,
-              tutorId: tutorId,
-              currentMark: 0,
-              targetMark: 75
-            };
-          }
-          return subject;
-        } else if (typeof subject === 'object' && subject !== null && 'subjectName' in subject) {
-          // Update existing object
-          if (subject.subjectName === selectedSubject) {
-            return {
-              ...subject,
-              tutorId: tutorId
-            };
-          }
+      const updatedSubjects: SubjectProgress[] = student.studentProfile.subjects.map((subjectProgress: SubjectProgress) => {
+        // Update the matching subject with tutor assignment
+        if (subjectProgress.subjectName.toLowerCase().trim() === selectedSubject.toLowerCase().trim()) {
+          return {
+            ...subjectProgress,
+            tutorId: tutorId
+          };
         }
-        return subject;
+        return subjectProgress;
       });
 
       // Update student document in Firebase
@@ -321,7 +302,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSt
                   }
                 </p>
                 <p><strong>Subject:</strong> {selectedSubject}</p>
-                <p><strong>Tutor:</strong> {tutorProfile?.userId ? 'You' : 'Unknown'}</p>
+                <p><strong>Tutor:</strong> {tutorProfile?.uid ? 'You' : 'Unknown'}</p>
               </div>
             </div>
           )}

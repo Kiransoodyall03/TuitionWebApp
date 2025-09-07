@@ -16,6 +16,7 @@ interface RegistrationForm {
   confirmPassword: string;
   displayName: string;
   userType: UserType | '';
+  tutorAccessCode: string; // New field for tutor access code
   
   // Tutor-specific fields
   tutorSubjects: string[];
@@ -34,12 +35,15 @@ interface RegistrationForm {
 
 const RegistrationPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [showTutorCodeModal, setShowTutorCodeModal] = useState(false);
+  const [tutorCodeError, setTutorCodeError] = useState<string | null>(null);
   const [form, setForm] = useState<RegistrationForm>({
     email: '',
     password: '',
     confirmPassword: '',
     displayName: '',
     userType: '',
+    tutorAccessCode: '',
     
     // Tutor fields
     tutorSubjects: [],
@@ -60,6 +64,9 @@ const RegistrationPage: React.FC = () => {
   const [localError, setLocalError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Set your tutor access code here - in production, this should be in environment variables
+  const TUTOR_ACCESS_CODE = 'TEACH2025'; // Change this to your desired code
+
   const availableSubjects = [
     'Mathematics', 'English', 'Science', 'History', 'Geography',
     'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Art'
@@ -69,6 +76,35 @@ const RegistrationPage: React.FC = () => {
     setForm(prev => ({ ...prev, [field]: value }));
     if (error) clearError();
     if (localError) setLocalError(null);
+  };
+
+  const handleUserTypeSelection = (type: string) => {
+    if (type === 'tutor') {
+      // Show modal for tutor code
+      setShowTutorCodeModal(true);
+      setTutorCodeError(null);
+    } else {
+      // Direct selection for student
+      handleInputChange('userType', type);
+      handleInputChange('tutorAccessCode', ''); // Clear any tutor code
+    }
+  };
+
+  const validateTutorCode = () => {
+    if (form.tutorAccessCode.trim().toUpperCase() === TUTOR_ACCESS_CODE.toUpperCase()) {
+      handleInputChange('userType', 'tutor');
+      setShowTutorCodeModal(false);
+      setTutorCodeError(null);
+    } else {
+      setTutorCodeError('Invalid access code. Please contact the administrator if you need tutor access.');
+    }
+  };
+
+  const cancelTutorSelection = () => {
+    setShowTutorCodeModal(false);
+    setTutorCodeError(null);
+    handleInputChange('tutorAccessCode', '');
+    handleInputChange('userType', '');
   };
 
   // For tutor subjects (simple string array)
@@ -273,7 +309,7 @@ const RegistrationPage: React.FC = () => {
               name="userType" 
               value="student" 
               checked={form.userType === 'student'}
-              onChange={(e) => handleInputChange('userType', e.target.value)} 
+              onChange={(e) => handleUserTypeSelection(e.target.value)} 
               disabled={contextLoading}
               className={styles.userTypeRadio}
             />
@@ -288,13 +324,18 @@ const RegistrationPage: React.FC = () => {
               name="userType" 
               value="tutor" 
               checked={form.userType === 'tutor'}
-              onChange={(e) => handleInputChange('userType', e.target.value)} 
+              onChange={(e) => handleUserTypeSelection(e.target.value)} 
               disabled={contextLoading}
               className={styles.userTypeRadio}
             />
             <div className={styles.userTypeContent}>
               <h4>Tutor</h4>
               <p>I want to teach students</p>
+              {form.userType === 'tutor' && (
+                <span style={{fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 'bold'}}>
+                  ✓ Access verified
+                </span>
+              )}
             </div>
           </label>
         </div>
@@ -310,6 +351,77 @@ const RegistrationPage: React.FC = () => {
           Next
         </button>
       </div>
+
+      {/* Tutor Access Code Modal */}
+      {showTutorCodeModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '8px',
+            maxWidth: '400px',
+            width: '90%',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
+              Tutor Access Required
+            </h3>
+            <p style={{ marginBottom: '1rem', color: '#666' }}>
+              Please enter the tutor access code to register as a tutor.
+            </p>
+            <input
+              type="password"
+              value={form.tutorAccessCode}
+              onChange={(e) => handleInputChange('tutorAccessCode', e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && validateTutorCode()}
+              className={styles.input}
+              placeholder="Enter access code"
+              autoFocus
+              style={{ marginBottom: '0.5rem', width: '100%' }}
+            />
+            {tutorCodeError && (
+              <div style={{ 
+                color: '#dc2626', 
+                fontSize: '0.875rem', 
+                marginBottom: '1rem',
+                padding: '0.5rem',
+                backgroundColor: '#fee2e2',
+                borderRadius: '4px'
+              }}>
+                {tutorCodeError}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={cancelTutorSelection}
+                className={`${styles.button} ${styles.buttonSecondary}`}
+                style={{ marginRight: '0.5rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={validateTutorCode}
+                className={`${styles.button} ${styles.buttonPrimary}`}
+              >
+                Verify
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

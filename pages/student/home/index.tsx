@@ -1,6 +1,6 @@
 // src/pages/StudentHome/StudentHome.tsx
 import React, { useState, useEffect } from 'react';
-import { Student, Booking } from '../../../services/types';
+import { StudentProfile, Booking, SubjectProgress } from '../../../services/types';
 import { useUserContext } from '../../../services/userContext';
 import { useStudent, StudentStats, WeeklyStats } from '../../../services/apiFunctions/student';
 import StudentCalendar from '../../../components/calendarStudent';
@@ -19,32 +19,33 @@ export const StudentHome = ({ navigation }: StudentHomeProps) => {
   // Use the student hook for data fetching
   const studentHook = useStudent();
 
-  // Prepare a minimal Student object for the modal
-  const studentForModal: Student = {
-    studentId: studentHook?.studentId || '',
-    username: userProfile?.displayName ?? '',
-    password: '',
-    role: 'student',
-    grade: String(studentProfile?.grade ?? 12),
-    email: userProfile?.email,
-    subjects: (studentProfile?.subjects ?? []).map(s => {
+  // Prepare a StudentProfile object for the modal
+  const studentForModal: StudentProfile | null = studentProfile ? {
+    ...studentProfile,
+    uid: studentProfile.uid || userProfile?.uid || '',
+    email: studentProfile.email || userProfile?.email || '',
+    displayName: studentProfile.displayName || userProfile?.displayName || '',
+    userType: 'student' as const,
+    // Ensure subjects is always SubjectProgress array
+    subjects: (studentProfile.subjects || []).map(s => {
       if (typeof s === 'string') {
         return {
           subjectName: s,
           tutorId: '',
           currentMark: 0,
-          targetMark: 0
-        };
+          targetMark: 75
+        } as SubjectProgress;
       }
-      return s;
+      return s as SubjectProgress;
     }),
-    tutorIds: [],
-    parentId: '',
-    parentName: '',
-    parentContactNumber: '',
-    parentEmail: '',
-    tokens: 0
-  };
+    grade: studentProfile.grade || 12,
+    tutorIds: studentProfile.tutorIds || [],
+    parentName: studentProfile.parentName || '',
+    parentEmail: studentProfile.parentEmail || '',
+    parentContactNumber: studentProfile.parentContactNumber || '',
+    tokens: studentProfile.tokens || 0,
+    parentId: studentProfile.parentId || ''
+  } : null;
 
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -184,8 +185,12 @@ export const StudentHome = ({ navigation }: StudentHomeProps) => {
 
   const handleJoinBooking = () => {
     if (!selectedBooking) return;
-    if (selectedBooking.meetingLink) {
-      window.open(selectedBooking.meetingLink, '_blank', 'noopener,noreferrer');
+    
+    // Check for Teams meeting link first, then fall back to general meeting link
+    const meetingLink = selectedBooking.teamsJoinUrl || selectedBooking.meetingLink;
+    
+    if (meetingLink) {
+      window.open(meetingLink, '_blank', 'noopener,noreferrer');
     } else {
       alert('No meeting link available for this booking.');
     }
@@ -212,7 +217,7 @@ export const StudentHome = ({ navigation }: StudentHomeProps) => {
     );
   }
 
-  if (userType !== 'student' || !user) {
+  if (userType !== 'student' || !user || !studentForModal) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 50%, #ddd6fe 100%)' }}>
         <div className={styles.notStudentMessage}>Not a Student or profile not loaded.</div>
@@ -320,7 +325,7 @@ export const StudentHome = ({ navigation }: StudentHomeProps) => {
       </div>
 
       {/* Booking Modal (portal) */}
-      {isBookingModalOpen && selectedBooking && (
+      {isBookingModalOpen && selectedBooking && studentForModal && (
         <BookingModalStudent
           booking={selectedBooking}
           student={studentForModal}

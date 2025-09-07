@@ -1,8 +1,9 @@
 // services/apiFunctions/tutor.ts
 import { useCallback, useState } from 'react';
-import { collection, query, where, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';import { db } from '../firebase/config';
-import { useAuth } from './useAuth';
-import { Booking, StudentProfile } from '../types';
+import { collection, query, where, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { useUserContext } from '../userContext';
+import { Booking, StudentProfile, TutorProfile } from '../types';
 
 interface TutorStatistics {
   totalEarnings: number;
@@ -17,11 +18,12 @@ interface WeeklyStatistics {
 }
 
 export const useTutor = () => {
-  const { userProfile, tutorProfile, isTutor } = useAuth();
+  const { userProfile, tutorProfile, userType } = useUserContext();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const tutorUserId = userProfile?.uid;
+  const isTutor = userType === 'tutor';
 
   /**
    * Helper function to get start and end of current week (Monday to Sunday)
@@ -128,7 +130,7 @@ export const useTutor = () => {
         if (studentIds.has(doc.id)) {
           students.push({ 
             ...doc.data(), 
-            userId: doc.id 
+            uid: doc.id  // Changed from userId to uid to match new types
           } as StudentProfile);
         }
       });
@@ -384,7 +386,7 @@ export const useTutor = () => {
     }
   }, [tutorUserId]);
 
-/**
+  /**
    * Calculate total number of students from the tutor's studentIds array
    */
   const calculateTotalStudents = useCallback(async (tutorId?: string): Promise<number> => {
@@ -405,7 +407,7 @@ export const useTutor = () => {
         return 0;
       }
       
-      const tutorData = tutorDoc.data();
+      const tutorData = tutorDoc.data() as TutorProfile;
       const studentIds = tutorData.studentIds || [];
       
       // Return the count of studentIds array
@@ -419,6 +421,7 @@ export const useTutor = () => {
       return 0;
     }
   }, [tutorUserId]);
+
   /**
    * Fetch all total statistics at once (for profile page)
    */
@@ -481,6 +484,6 @@ export const useTutor = () => {
     
     loading,
     error,
-    isTutor: isTutor(),
+    isTutor,
   };
 };

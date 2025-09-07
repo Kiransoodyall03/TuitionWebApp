@@ -1,8 +1,8 @@
 // components/CreateLessonModal.tsx
 import React, { useState, useEffect } from 'react';
 import styles from './createLessonModal.module.css';
-import { Booking, StudentProfile, UserProfile } from '../../services/types';
-import { useAuth } from '../../services/apiFunctions/useAuth'; // or useUserContext
+import { Booking, StudentProfile, UserProfile, SubjectProgress } from '../../services/types';
+import { useUserContext } from '../../services/userContext';
 import { collection, addDoc, updateDoc, doc, query, getDocs, where } from 'firebase/firestore';
 import { db } from '../../services/firebase/config';
 
@@ -14,11 +14,8 @@ type CreateLessonModalProps = {
 
 // Extended student interface to include user profile data
 interface StudentWithProfile extends StudentProfile {
-  studentId: string; // Add this for compatibility
-  displayName?: string;
-  email?: string;
-  username?: string; // Legacy field
-  grade?: number;
+  displayName: string;
+  email: string;
 }
 
 const CreateLessonModal: React.FC<CreateLessonModalProps> = ({
@@ -36,15 +33,16 @@ const CreateLessonModal: React.FC<CreateLessonModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get tutor information from auth context
-  const { userProfile, tutorProfile, isTutor } = useAuth();
+  // Get tutor information from user context
+  const { userProfile, tutorProfile, userType } = useUserContext();
   
   // Get the tutorId from the authenticated user
   const tutorId = userProfile?.uid || '';
+  const isTutor = userType === 'tutor';
 
   useEffect(() => {
     const fetchStudentsWithProfiles = async () => {
-      if (!tutorId || !isTutor()) {
+      if (!tutorId || !isTutor) {
         console.log('Not a tutor or tutorId not available');
         setStudentsList([]);
         return;
@@ -58,7 +56,7 @@ const CreateLessonModal: React.FC<CreateLessonModalProps> = ({
         const allStudents: StudentProfile[] = [];
         
         studentsSnapshot.forEach(doc => {
-          const studentData = { ...doc.data(), userId: doc.id } as StudentProfile;
+          const studentData = { ...doc.data(), uid: doc.id } as StudentProfile;
           allStudents.push(studentData);
         });
 
@@ -71,33 +69,39 @@ const CreateLessonModal: React.FC<CreateLessonModalProps> = ({
           usersMap.set(doc.id, userData);
         });
 
-        // Now fetch bookings to determine which students are associated with this tutor
-        const bookingsSnapshot = await getDocs(
-          query(collection(db, 'bookings'), where('tutorId', '==', tutorId))
-        );
-        
-        const studentIdsSet = new Set<string>();
-        bookingsSnapshot.forEach(doc => {
-          const booking = doc.data() as Booking;
-          if (booking.studentId) {
-            studentIdsSet.add(booking.studentId);
-          }
+        // Filter students who have subjects with this tutor assigned
+        const tutorStudents = allStudents.filter(student => {
+          return student.subjects.some((subjectProgress: SubjectProgress) => 
+            subjectProgress.tutorId === tutorId
+          );
         });
 
-        // If no students found via bookings, get all students (for initial assignment)
-        const relevantStudents = studentIdsSet.size > 0 
-          ? allStudents.filter(s => studentIdsSet.has(s.userId))
-          : allStudents;
+        // If no students found via subject assignments, check bookings for existing relationships
+        let relevantStudents = tutorStudents;
+        
+        if (tutorStudents.length === 0) {
+          const bookingsSnapshot = await getDocs(
+            query(collection(db, 'bookings'), where('tutorId', '==', tutorId))
+          );
+          
+          const studentIdsSet = new Set<string>();
+          bookingsSnapshot.forEach(doc => {
+            const booking = doc.data() as Booking;
+            if (booking.studentId) {
+              studentIdsSet.add(booking.studentId);
+            }
+          });
+
+          relevantStudents = allStudents.filter(s => studentIdsSet.has(s.uid));
+        }
 
         // Combine student data with user profiles
         const studentsWithProfiles: StudentWithProfile[] = relevantStudents.map(student => {
-          const userProfile = usersMap.get(student.userId);
+          const userProfile = usersMap.get(student.uid);
           return {
             ...student,
-            studentId: student.userId, // For backward compatibility
             displayName: userProfile?.displayName,
             email: userProfile?.email,
-            username: userProfile?.displayName, // Legacy field
           };
         });
 
@@ -114,27 +118,27 @@ const CreateLessonModal: React.FC<CreateLessonModalProps> = ({
 
   // Update student email when student is selected
   useEffect(() => {
-    const selectedStudent = studentsList.find(s => s.studentId === studentId);
+    const selectedStudent = studentsList.find(s => s.uid === studentId);
     if (selectedStudent) {
       setStudentEmail(selectedStudent.email || '');
     }
   }, [studentId, studentsList]);
 
-  // derive subjects for selected student
+  // derive subjects for selected student that are assigned to this tutor
   const studentSubjects = React.useMemo(() => {
-    const selectedStudent = studentsList.find(s => s.studentId === studentId);
+    const selectedStudent = studentsList.find(s => s.uid === studentId);
     if (!selectedStudent || !selectedStudent.subjects) return [];
     
-    // Handle both string array and object array formats
+    // Filter subjects where this tutor is assigned
     return selectedStudent.subjects
-      .map(s => {
-        if (typeof s === 'string') return s;
-        return (s as any).subjectName;
-      })
+      .filter((subjectProgress: SubjectProgress) => 
+        subjectProgress.tutorId === tutorId
+      )
+      .map((subjectProgress: SubjectProgress) => subjectProgress.subjectName)
       .filter((subjectName): subjectName is string => 
         typeof subjectName === 'string' && subjectName.length > 0
       );
-  }, [studentsList, studentId]);
+  }, [studentsList, studentId, tutorId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,7 +213,7 @@ const CreateLessonModal: React.FC<CreateLessonModalProps> = ({
   };
 
   // Don't render if not a tutor
-  if (!isTutor()) {
+  if (!isTutor) {
     return (
       <div className={styles.overlay}>
         <div className={styles.modal}>
@@ -281,8 +285,8 @@ const CreateLessonModal: React.FC<CreateLessonModalProps> = ({
               {studentsList.length ? 'Select student' : 'Loading students...'}
             </option>
             {studentsList.map(s => (
-              <option key={s.studentId} value={s.studentId}>
-                {s.displayName || s.username || `Student ${s.studentId}`}
+              <option key={s.uid} value={s.uid}>
+                {s.displayName || `Student ${s.uid}`}
                 {s.grade ? ` - Grade ${s.grade}` : ''}
                 {s.email ? ` (${s.email})` : ''}
               </option>
@@ -305,7 +309,7 @@ const CreateLessonModal: React.FC<CreateLessonModalProps> = ({
               {studentId
                 ? studentSubjects.length
                   ? 'Select subject'
-                  : 'No subjects found'
+                  : 'No subjects assigned to you for this student'
                 : 'Select a student first'}
             </option>
             {studentSubjects.map(subj => (

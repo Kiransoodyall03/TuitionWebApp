@@ -1,7 +1,7 @@
 import { collection, query, where, getDocs, doc, getDoc, orderBy, limit } from "@firebase/firestore";
 import { db } from "../firebase/config";
 import { useUserContext } from "../userContext";
-import { Booking, Lesson, Student, TokenPurchase } from "../types";
+import { Booking, Lesson, StudentProfile, TokenPurchase, SubjectProgress } from "../types";
 import { useCallback } from "react";
 
 // Types for student statistics
@@ -40,18 +40,17 @@ export interface RecentActivity {
 }
 
 // Fixed useStudent hook that handles undefined studentId properly
-
 export const useStudent = () => {
     const { user, userType, studentProfile } = useUserContext();
     
     // Don't return null - always return the hook object
     // Just make studentId optional/empty when not available
     const studentId = (userType === 'student' && user && studentProfile) 
-        ? studentProfile.userId 
+        ? studentProfile.uid  // Changed from userId to uid to match new types
         : '';
 
     // Fetch basic student data
-    const fetchStudent = useCallback(async (studentId: string): Promise<Student | null> => {
+    const fetchStudent = useCallback(async (studentId: string): Promise<StudentProfile | null> => {
         if (!studentId) {
             console.log("No studentId provided to fetchStudent");
             return null;
@@ -61,7 +60,7 @@ export const useStudent = () => {
             const docRef = doc(db, "students", studentId);
             const docSnap = await getDoc(docRef);
             if (!docSnap.exists()) return null;
-            return { ...(docSnap.data() as Student), studentId: docSnap.id };
+            return { ...(docSnap.data() as StudentProfile), uid: docSnap.id };
         } catch (err) {
             console.error("Error fetching student:", err);
             return null;
@@ -124,7 +123,7 @@ export const useStudent = () => {
         }
     }, [fetchStudentBookings]);
 
-    // Calculate comprehensive student statistics - FIXED
+    // Calculate comprehensive student statistics - FIXED for new types
     const calculateStudentStats = useCallback(async (studentId: string): Promise<StudentStats> => {
         if (!studentId) {
             console.log("No studentId provided to calculateStudentStats");
@@ -167,8 +166,13 @@ export const useStudent = () => {
                 return lessonDate > new Date() && booking.confirmed;
             });
 
-            // Calculate average grade from student subjects
-            const gradesSum = student.subjects.reduce((sum, subject) => sum + subject.currentMark, 0);
+            // Calculate average grade from student subjects (now SubjectProgress type)
+            const gradesSum = student.subjects.reduce((sum, subject) => {
+                if (typeof subject === 'object' && 'currentMark' in subject) {
+                    return sum + subject.currentMark;
+                }
+                return sum;
+            }, 0);
             const averageGrade = student.subjects.length > 0 ? Math.round(gradesSum / student.subjects.length) : 0;
 
             return {
@@ -267,15 +271,13 @@ export const useStudent = () => {
         }
     }, [fetchStudentLessons, fetchStudentBookings]);
 
-    // Get subject performance data - Keep the fixed version from before
+    // Get subject performance data - Updated for new SubjectProgress type
     const getSubjectPerformance = useCallback(async (studentId: string): Promise<SubjectPerformance[]> => {
         if (!studentId) {
             console.log("No studentId provided to getSubjectPerformance");
             return [];
         }
         
-        // ... rest of the fixed getSubjectPerformance function from the previous artifact
-        // (keeping the same implementation as before)
         try {
             const [student, lessons, bookings] = await Promise.all([
                 fetchStudent(studentId),
@@ -289,34 +291,12 @@ export const useStudent = () => {
             }
 
             const performanceData = await Promise.all(
-                student.subjects.map(async (subject) => {
-                    let subjectName: string;
-                    let currentMark: number = 0;
-                    let targetMark: number = 100;
-                    let tutorId: string | undefined;
-
-                    if (typeof subject === 'string') {
-                        subjectName = subject;
-                    } else if (typeof subject === 'object' && subject !== null) {
-                        subjectName = subject.subjectName || 'Unknown Subject';
-                        
-                        if ('currentMark' in subject) {
-                            const mark = subject.currentMark;
-                            currentMark = typeof mark === 'number' ? mark : 
-                                         typeof mark === 'string' ? parseFloat(mark) || 0 : 0;
-                        }
-                        
-                        if ('targetMark' in subject) {
-                            const mark = subject.targetMark;
-                            targetMark = typeof mark === 'number' ? mark : 
-                                        typeof mark === 'string' ? parseFloat(mark) || 100 : 100;
-                        }
-                        
-                        tutorId = subject.tutorId  || undefined;
-                    } else {
-                        console.warn("Unexpected subject format:", subject);
-                        return null;
-                    }
+                student.subjects.map(async (subject: SubjectProgress) => {
+                    // Now we know subjects are always SubjectProgress type
+                    const subjectName = subject.subjectName;
+                    const currentMark = subject.currentMark || 0;
+                    const targetMark = subject.targetMark || 100;
+                    const tutorId = subject.tutorId || undefined;
 
                     const subjectLessons = lessons.filter(lesson => {
                         const booking = bookings.find(b => b.bookingId === lesson.bookingId);
@@ -359,12 +339,12 @@ export const useStudent = () => {
                                 const tutorDoc = await getDoc(doc(db, "tutors", tutorId.trim()));
                                 if (tutorDoc.exists()) {
                                     const tutorData = tutorDoc.data();
-                                    tutorName = tutorData?.username || tutorData?.displayName || tutorData?.name || 'Unknown Tutor';
+                                    tutorName = tutorData?.displayName || tutorData?.username || 'Unknown Tutor';
                                 } else {
                                     const userDoc = await getDoc(doc(db, "users", tutorId.trim()));
                                     if (userDoc.exists()) {
                                         const userData = userDoc.data();
-                                        tutorName = userData?.displayName || userData?.username || 'Unknown Tutor';
+                                        tutorName = userData?.displayName || 'Unknown Tutor';
                                     } else {
                                         console.log(`Tutor not found for ID: ${tutorId}`);
                                         tutorName = 'Tutor Not Found';
@@ -374,7 +354,7 @@ export const useStudent = () => {
                                 console.warn(`Invalid tutor ID format: ${tutorId}`);
                                 tutorName = 'Invalid Tutor ID';
                             }
-                        } catch (err) {
+                        } catch (err: any) {
                             console.error(`Error fetching tutor data for ID ${tutorId}:`, err);
                             if (err.code === 'permission-denied') {
                                 tutorName = 'Access Denied';
@@ -399,7 +379,7 @@ export const useStudent = () => {
                 })
             );
 
-            return performanceData.filter(data => data !== null) as SubjectPerformance[];
+            return performanceData;
             
         } catch (err) {
             console.error("Error fetching subject performance:", err);
@@ -501,7 +481,7 @@ export const useStudent = () => {
                         const tutorDoc = await getDoc(doc(db, "tutors", booking.tutorId));
                         if (tutorDoc.exists()) {
                             const tutorData = tutorDoc.data();
-                            tutorName = tutorData.username || 'Unknown Tutor';
+                            tutorName = tutorData.displayName || tutorData.username || 'Unknown Tutor';
                         }
                     } catch (err) {
                         console.error("Error fetching tutor data:", err);

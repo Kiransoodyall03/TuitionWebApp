@@ -320,7 +320,6 @@ export const StudentProfile = () => {
   const [displayName, setDisplayName] = useState('');
   const [grade, setGrade] = useState('');
   const [subjects, setSubjects] = useState('');
-  const [enrolledCourses, setEnrolledCourses] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
   // State for statistics from Firebase
@@ -348,13 +347,16 @@ export const StudentProfile = () => {
     if (userProfile && studentProfile) {
       setDisplayName(userProfile.displayName || '');
       setGrade(studentProfile.grade?.toString() || '');
-      setSubjects(studentProfile.subjects?.join(', ') || '');
-      setEnrolledCourses(studentProfile.enrolledCourses?.join(', ') || '');
+      // Handle SubjectProgress array properly
+      const subjectNames = studentProfile.subjects?.map(s => 
+        typeof s === 'string' ? s : s.subjectName
+      ).filter(Boolean).join(', ') || '';
+      setSubjects(subjectNames);
     }
   }, [userProfile, studentProfile]);
 
   // Load student data when component mounts
-useEffect(() => {
+  useEffect(() => {
     const loadStudentData = async () => {
       // Check if we have a valid studentId before loading
       if (!studentHook?.studentId) {
@@ -392,30 +394,8 @@ useEffect(() => {
 
     loadStudentData();
   }, [studentHook?.studentId]);
+
   // Early return if not a student or no user data
-  if (userType !== 'student' || !user || !userProfile || !studentProfile || !studentHook) {
-    return <div className={styles.notStudentMessage}>Not a Student or profile not loaded.</div>;
-  }
-
-  const handleSave = async () => {
-    try {
-      await updateUserProfile({
-        displayName: displayName
-      });
-
-      await updateStudentProfile({
-        grade: grade ? parseInt(grade) : undefined,
-        subjects: subjects.split(',').map(s => s.trim()).filter(s => s),
-        enrolledCourses: enrolledCourses.split(',').map(c => c.trim()).filter(c => c)
-      });
-
-      setIsEditing(false);
-      alert('Profile updated successfully!');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
-    }
-  };
   if (userType !== 'student' || !user || !userProfile || !studentProfile || !studentHook?.studentId) {
     if (isLoading) {
       return (
@@ -429,11 +409,54 @@ useEffect(() => {
     }
     return <div className={styles.notStudentMessage}>Not a Student or profile not loaded.</div>;
   }
+
+  const handleSave = async () => {
+    try {
+      await updateUserProfile({
+        displayName: displayName
+      });
+
+      // Convert subject names back to SubjectProgress format
+      const subjectNames = subjects.split(',').map(s => s.trim()).filter(s => s);
+      const updatedSubjects = subjectNames.map(name => {
+        // Find existing subject data or create new
+        const existing = studentProfile.subjects?.find(s => 
+          (typeof s === 'string' ? s : s.subjectName) === name
+        );
+        
+        if (existing && typeof existing === 'object') {
+          return existing;
+        }
+        
+        // Create new SubjectProgress entry
+        return {
+          subjectName: name,
+          currentMark: 0,
+          targetMark: 75,
+          tutorId: ''
+        };
+      });
+
+      await updateStudentProfile({
+        grade: grade ? parseInt(grade) : undefined,
+        subjects: updatedSubjects
+      });
+
+      setIsEditing(false);
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
+  };
+
   const handleCancel = () => {
     setDisplayName(userProfile.displayName || '');
     setGrade(studentProfile.grade?.toString() || '');
-    setSubjects(studentProfile.subjects?.join(', ') || '');
-    setEnrolledCourses(studentProfile.enrolledCourses?.join(', ') || '');
+    const subjectNames = studentProfile.subjects?.map(s => 
+      typeof s === 'string' ? s : s.subjectName
+    ).filter(Boolean).join(', ') || '';
+    setSubjects(subjectNames);
     setIsEditing(false);
   };
 
@@ -560,19 +583,6 @@ useEffect(() => {
                 />
               </div>
 
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>
-                  Enrolled Courses
-                </label>
-                <textarea
-                  value={enrolledCourses}
-                  onChange={(e) => setEnrolledCourses(e.target.value)}
-                  rows={2}
-                  placeholder="Enter enrolled courses separated by commas"
-                  className={styles.textareaInput}
-                />
-              </div>
-
               <div className={styles.buttonGroup}>
                 <button
                   onClick={handleSave}
@@ -591,7 +601,7 @@ useEffect(() => {
             </div>
           )}
 
-          {/* Stats Grid */}
+          {/* Stats Grid - rest of component remains the same */}
           {!isEditing && (
             <div className={styles.statsGrid}>
               <StatCard 
@@ -633,6 +643,7 @@ useEffect(() => {
           )}
         </div>
 
+        {/* Rest of the component remains the same */}
         {/* Weekly Performance Section */}
         {!isEditing && (
           <div className={styles.weeklySection}>
@@ -724,7 +735,7 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Dashboard Selection */}
+        {/* Dashboard Selection and other sections remain the same */}
         {!isEditing && (
           <div className={styles.dashboardSelection}>
             <h3 className={styles.dashboardTitle}>View Dashboard</h3>
@@ -744,7 +755,7 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Content Grid */}
+        {/* Content Grid - keeping all the existing dashboard content */}
         {!isEditing && (
           <div className={styles.contentGrid}>
             {selectedDashboard === 'Overview' && (
