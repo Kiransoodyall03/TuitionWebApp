@@ -67,8 +67,7 @@ const ConfirmBookingModal = ({
       const startTime = new Date(date.year, date.month - 1, date.day, date.hour, date.minute);
       const durationMs = (bookingData.durationMinutes || 60) * 60 * 1000;
       const endTime = new Date(startTime.getTime() + durationMs);
-
-      const response = await fetch(`/api/bookings/confirm`, {
+const response = await fetch(`https://europe-west1-tuitionwebapp.cloudfunctions.net/api/bookings/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -73,19 +73,31 @@ async function checkMicrosoftAuthStatus(tutorId: string) {
   const db = getFirestore();
   const tutorDoc = await db.collection('tutors').doc(tutorId).get();
   
+  console.log('[confirm-api] Checking auth for tutorId:', tutorId);
+  
   if (!tutorDoc.exists) {
+    console.log('[confirm-api] Tutor document does not exist');
     return { isConnected: false, needsReconnect: false };
   }
   
   const tutorData = tutorDoc.data();
+  console.log('[confirm-api] Tutor data exists:', !!tutorData);
+  console.log('[confirm-api] microsoftAuth exists:', !!tutorData?.microsoftAuth);
+  console.log('[confirm-api] refreshToken exists:', !!tutorData?.microsoftAuth?.refreshToken);
+  
   const microsoftAuth = tutorData?.microsoftAuth;
   
   if (!microsoftAuth?.refreshToken) {
+    console.log('[confirm-api] No refresh token found');
     return { isConnected: false, needsReconnect: false };
   }
   
   const expiresAt = new Date(microsoftAuth.expiresAt);
   const now = new Date();
+  
+  console.log('[confirm-api] Token expires at:', expiresAt);
+  console.log('[confirm-api] Current time:', now);
+  console.log('[confirm-api] Token expired?', expiresAt <= now);
   
   return {
     isConnected: true,
