@@ -1,12 +1,10 @@
 // components/MicrosoftAccountConnection.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useUserContext } from '../services/userContext';
-import { signInWithRedirect, getRedirectResult } from 'firebase/auth';
-import { auth } from '../services/firebase/config';
-import { OAuthProvider } from 'firebase/auth';
 
 interface ConnectionStatus {
   isConnected: boolean;
+  hasRefreshToken: boolean;
   userInfo?: {
     displayName: string;
     mail: string;
@@ -17,112 +15,147 @@ interface ConnectionStatus {
 }
 
 export const MicrosoftAccountConnection: React.FC = () => {
-  const { userProfile, linkMicrosoftToAccount, updateUserProfile, error, clearError } = useUserContext();
+  const { userProfile, updateUserProfile } = useUserContext();
   const [status, setStatus] = useState<ConnectionStatus>({
     isConnected: false,
+    hasRefreshToken: false,
     loading: true
   });
   const [isLinking, setIsLinking] = useState(false);
-  const [useRedirect, setUseRedirect] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const authWindowRef = useRef<Window | null>(null);
+  const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     checkConnectionStatus();
-    checkForRedirectResult();
+    
+    // Listen for messages from auth window
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'microsoft-auth-success') {
+        console.log('[MicrosoftConnection] Auth success message received');
+        setTimeout(() => {
+          checkConnectionStatus();
+        }, 1000);
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current);
+      }
+    };
   }, [userProfile]);
 
-  const checkConnectionStatus = () => {
-    if (!userProfile) {
-      setStatus({ isConnected: false, loading: false });
+  const checkConnectionStatus = async () => {
+    if (!userProfile?.uid) {
+      setStatus({ isConnected: false, hasRefreshToken: false, loading: false });
       return;
     }
 
-    // Check if Microsoft auth data exists in the user profile
-    const microsoftAuth = userProfile.microsoftAuth;
-    
-    if (microsoftAuth?.refreshToken || (microsoftAuth?.accessToken && microsoftAuth?.userInfo)) {
-      setStatus({
-        isConnected: true,
-        userInfo: microsoftAuth.userInfo,
-        loading: false
-      });
-    } else {
-      setStatus({
-        isConnected: false,
-        loading: false
-      });
-    }
-  };
-
-  const checkForRedirectResult = async () => {
     try {
-      const result = await getRedirectResult(auth);
-      if (result) {
-        console.log('[MicrosoftConnection] Redirect result received');
-        // The userContext should handle the result
-        setIsLinking(false);
-        setLocalError(null);
+      // Check status from backend
+      const response = await fetch(`https://europe-west1-tuitionwebapp.cloudfunctions.net/api/auth/microsoft/status?tutorId=${userProfile.uid}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setStatus({
+          isConnected: data.isConnected || data.connected,
+          hasRefreshToken: data.hasRefreshToken,
+          userInfo: data.userInfo,
+          loading: false
+        });
+      } else {
+        // Fallback to local data
+        const microsoftAuth = userProfile.microsoftAuth;
+        setStatus({
+          isConnected: !!(microsoftAuth?.accessToken),
+          hasRefreshToken: !!(microsoftAuth?.refreshToken),
+          userInfo: microsoftAuth?.userInfo,
+          loading: false
+        });
       }
-    } catch (error: any) {
-      console.error('[MicrosoftConnection] Redirect error:', error);
-      if (error.code !== 'auth/popup-blocked') {
-        setLocalError(error.message);
-      }
-      setIsLinking(false);
+    } catch (error) {
+      console.error('[MicrosoftConnection] Error checking status:', error);
+      // Fallback to local data
+      const microsoftAuth = userProfile.microsoftAuth;
+      setStatus({
+        isConnected: !!(microsoftAuth?.accessToken),
+        hasRefreshToken: !!(microsoftAuth?.refreshToken),
+        userInfo: microsoftAuth?.userInfo,
+        loading: false
+      });
     }
   };
 
   const handleConnect = async (event: React.MouseEvent) => {
-    // Prevent any default behavior
     event.preventDefault();
     event.stopPropagation();
     
+    if (!userProfile?.uid) {
+      setLocalError('You must be logged in to connect Microsoft account');
+      return;
+    }
+    
     setIsLinking(true);
     setLocalError(null);
-    clearError();
     
     try {
-      if (useRedirect) {
-        // Use redirect method (more reliable but leaves the page)
-        console.log('[MicrosoftConnection] Using redirect method');
-        const provider = new OAuthProvider('microsoft.com');
-        provider.setCustomParameters({
-          tenant: 'common',
-          prompt: 'consent'
-        });
-        provider.addScope('User.Read');
-        provider.addScope('Calendars.ReadWrite');
-        provider.addScope('OnlineMeetings.ReadWrite');
-        provider.addScope('offline_access');
-        
-        await signInWithRedirect(auth, provider);
-        // User will be redirected to Microsoft login
-      } else {
-        // Try popup method first
-        console.log('[MicrosoftConnection] Using popup method');
-        try {
-          await linkMicrosoftToAccount();
-          setLocalError(null);
-        } catch (popupError: any) {
-          console.error('[MicrosoftConnection] Popup error:', popupError);
-          
-          if (popupError.code === 'auth/popup-blocked' || 
-              popupError.message?.includes('popup-blocked')) {
-            // Popup was blocked, show message to user
-            setLocalError('Popup was blocked. Please allow popups for this site or use the redirect option below.');
-            setUseRedirect(true);
-          } else {
-            throw popupError;
+      // Get auth URL from backend
+      const response = await fetch('https://europe-west1-tuitionwebapp.cloudfunctions.net/api/auth/microsoft/auth-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tutorId: userProfile.uid
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get authorization URL');
+      }
+
+      const { authUrl } = await response.json();
+      console.log('[MicrosoftConnection] Got auth URL, opening popup...');
+
+      // Open in popup
+      const width = 500;
+      const height = 600;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      authWindowRef.current = window.open(
+        authUrl,
+        'Microsoft Authentication',
+        `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+      );
+
+      if (!authWindowRef.current) {
+        throw new Error('Popup was blocked. Please allow popups for this site and try again.');
+      }
+
+      // Check when window closes
+      checkIntervalRef.current = setInterval(() => {
+        if (authWindowRef.current?.closed) {
+          if (checkIntervalRef.current) {
+            clearInterval(checkIntervalRef.current);
+            checkIntervalRef.current = null;
           }
+          // Refresh status after window closes
+          setTimeout(() => {
+            checkConnectionStatus();
+            setIsLinking(false);
+          }, 1000);
         }
-      }
+      }, 500);
+
     } catch (error: any) {
-      console.error('[MicrosoftConnection] Error linking Microsoft account:', error);
+      console.error('[MicrosoftConnection] Error:', error);
       setLocalError(error.message || 'Failed to connect Microsoft account');
-    } finally {
-      if (!useRedirect) {
-        setIsLinking(false);
-      }
+      setIsLinking(false);
     }
   };
 
@@ -131,18 +164,42 @@ export const MicrosoftAccountConnection: React.FC = () => {
       return;
     }
 
+    if (!userProfile?.uid) {
+      setLocalError('You must be logged in');
+      return;
+    }
+
     try {
       setIsLinking(true);
       
-      // Remove Microsoft auth data from user profile
-      await updateUserProfile({
-        microsoftAuth: null
+      // Call backend to disconnect
+      const response = await fetch('https://europe-west1-tuitionwebapp.cloudfunctions.net/api/auth/microsoft/disconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tutorId: userProfile.uid
+        }),
       });
-      
-      setStatus({ isConnected: false, loading: false });
-      setLocalError(null);
+
+      if (response.ok) {
+        // Update local state
+        await updateUserProfile({
+          microsoftAuth: null
+        });
+        
+        setStatus({ 
+          isConnected: false, 
+          hasRefreshToken: false,
+          loading: false 
+        });
+        setLocalError(null);
+      } else {
+        throw new Error('Failed to disconnect');
+      }
     } catch (error: any) {
-      console.error('[MicrosoftConnection] Error disconnecting Microsoft account:', error);
+      console.error('[MicrosoftConnection] Error disconnecting:', error);
       setLocalError('Failed to disconnect Microsoft account');
     } finally {
       setIsLinking(false);
@@ -160,26 +217,16 @@ export const MicrosoftAccountConnection: React.FC = () => {
     );
   }
 
-  const displayError = localError || error;
-
   return (
     <div className="p-4 border border-gray-200 rounded-lg">
       {/* Show any errors */}
-      {displayError && (
+      {localError && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-600">{displayError}</p>
-          
-          {displayError.includes('popup-blocked') && (
-            <div className="mt-2">
-              <p className="text-xs text-gray-600 mb-2">
-                To fix this, you can either:
-              </p>
-              <ul className="text-xs text-gray-600 list-disc ml-4">
-                <li>Allow popups for this site in your browser settings</li>
-                <li>Click the blocked popup icon in your browser's address bar</li>
-                <li>Use the "Connect with Redirect" option below</li>
-              </ul>
-            </div>
+          <p className="text-sm text-red-600">{localError}</p>
+          {localError.includes('popup') && (
+            <p className="text-xs text-gray-600 mt-2">
+              Please allow popups for this site in your browser settings and try again.
+            </p>
           )}
         </div>
       )}
@@ -199,16 +246,24 @@ export const MicrosoftAccountConnection: React.FC = () => {
             <h3 className="text-lg font-medium text-gray-900">Microsoft Account</h3>
             {status.isConnected ? (
               <div className="text-sm text-gray-600">
-                <p className="text-green-600 font-medium">✓ Connected</p>
+                <p className="text-green-600 font-medium">
+                  ✓ Connected {status.hasRefreshToken ? '(Full Access)' : '(Limited - Reconnect Needed)'}
+                </p>
                 {status.userInfo && (
                   <div>
                     <p className="font-medium">{status.userInfo.displayName}</p>
                     <p className="text-xs text-gray-500">{status.userInfo.mail || status.userInfo.userPrincipalName}</p>
                   </div>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
-                  Teams meetings will be created automatically for new bookings
-                </p>
+                {status.hasRefreshToken ? (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Teams meetings will be created automatically for new bookings
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠ No refresh token - please reconnect for persistent access
+                  </p>
+                )}
               </div>
             ) : (
               <div className="text-sm text-gray-600">
@@ -223,55 +278,68 @@ export const MicrosoftAccountConnection: React.FC = () => {
 
         <div className="flex-shrink-0">
           {status.isConnected ? (
-            <button
-              onClick={handleDisconnect}
-              disabled={isLinking}
-              className="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLinking ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                  <span>Disconnecting...</span>
-                </div>
-              ) : (
-                'Disconnect'
-              )}
-            </button>
-          ) : (
             <div className="flex flex-col gap-2">
               <button
-                onClick={handleConnect}
+                onClick={handleDisconnect}
                 disabled={isLinking}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLinking ? (
                   <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>{useRedirect ? 'Redirecting...' : 'Connecting...'}</span>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                    <span>Disconnecting...</span>
                   </div>
                 ) : (
-                  useRedirect ? 'Connect with Redirect' : 'Connect Microsoft Account'
+                  'Disconnect'
                 )}
               </button>
               
-              {!useRedirect && displayError?.includes('popup-blocked') && (
+              {!status.hasRefreshToken && (
                 <button
-                  onClick={(e) => {
-                    setUseRedirect(true);
-                    handleConnect(e);
-                  }}
+                  onClick={handleConnect}
                   disabled={isLinking}
-                  className="px-4 py-2 text-xs font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Try with Redirect Instead
+                  Reconnect for Full Access
                 </button>
               )}
             </div>
+          ) : (
+            <button
+              onClick={handleConnect}
+              disabled={isLinking}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLinking ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Connecting...</span>
+                </div>
+              ) : (
+                'Connect Microsoft Account'
+              )}
+            </button>
           )}
         </div>
       </div>
 
-      {/* Additional info for tutors */}
+      {/* Warning for connected but no refresh token */}
+      {status.isConnected && !status.hasRefreshToken && (
+        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+          <div className="flex items-start space-x-2">
+            <svg className="w-5 h-5 text-amber-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div className="text-xs">
+              <p className="font-medium mb-1">Limited Connection</p>
+              <p>Your Microsoft account is connected but without a refresh token. This means the connection will expire soon and Teams meeting creation will fail.</p>
+              <p className="mt-2 font-medium">Please click "Reconnect for Full Access" above.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info for tutors */}
       {userProfile?.userType === 'tutor' && !status.isConnected && (
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
           <div className="flex items-start space-x-2">

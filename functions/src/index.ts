@@ -3,9 +3,9 @@ import {onRequest} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import express from "express";
 import cors from "cors";
-import { confirmBooking } from "./bookings/confirm";
-import { microsoftCallback } from "./auth/callback";
-import { microsoftStatus } from "./auth/status";
+import {confirmBooking} from "./bookings/confirm";
+import {microsoftCallback} from "./auth/callback";
+import {microsoftStatus} from "./auth/status";
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -27,8 +27,8 @@ app.use((req, res, next) => {
 // ============================================
 // Microsoft Auth URL Generation
 // ============================================
-const MICROSOFT_CLIENT_ID = process.env.AZURE_CLIENT_ID;
-const REDIRECT_URI = process.env.AZURE_REDIRECT_URI;
+const MICROSOFT_CLIENT_ID = process.env.AZURE_CLIENT_ID || "9f1bbff3-6d5a-40dd-851f-da6dd6620990";
+const REDIRECT_URI = process.env.AZURE_REDIRECT_URI || 'https://europe-west1-tuitionwebapp.cloudfunctions.net/api/auth/microsoft/callback';
 
 async function generateMicrosoftAuthUrl(req: express.Request, res: express.Response): Promise<void> {
   const { tutorId, userId } = req.method === 'POST' ? req.body : req.query;
