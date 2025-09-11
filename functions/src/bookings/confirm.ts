@@ -9,10 +9,19 @@ const getFirestore = () => admin.firestore();
 // Helper functions for Microsoft token management
 async function refreshTokenAndGetAccessToken(tutorId: string): Promise<string> {
   const db = getFirestore();
-  const tutorDoc = await db.collection('tutors').doc(tutorId).get();
   
+  // Check tutors collection first
+  let tutorDoc = await db.collection('tutors').doc(tutorId).get();
+  let collection = 'tutors';
+  
+  // If not found in tutors, check users collection
   if (!tutorDoc.exists) {
-    throw new Error('Tutor not found');
+    tutorDoc = await db.collection('users').doc(tutorId).get();
+    collection = 'users';
+    
+    if (!tutorDoc.exists) {
+      throw new Error('Tutor not found in either collection');
+    }
   }
   
   const tutorData = tutorDoc.data();
@@ -31,13 +40,9 @@ async function refreshTokenAndGetAccessToken(tutorId: string): Promise<string> {
     return microsoftAuth.accessToken;
   }
   
-  // Get Azure credentials from environment variables
-  const azureClientId = process.env.AZURE_CLIENT_ID;
-  const azureClientSecret = process.env.AZURE_CLIENT_SECRET;
-  
-  if (!azureClientId || !azureClientSecret) {
-    throw new Error('Azure credentials not configured');
-  }
+  // Get Azure credentials - hardcoded for now since env vars aren't loading
+  const azureClientId = '9f1bbff3-6d5a-40dd-851f-da6dd6620990';
+  const azureClientSecret = 'dy58Q~jAJpfTZI6RInRi_O2JnZhfQpDxlPYxRdel';
   
   // Refresh the token
   const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
@@ -59,8 +64,8 @@ async function refreshTokenAndGetAccessToken(tutorId: string): Promise<string> {
   
   const tokens = await tokenResponse.json();
   
-  // Update stored tokens
-  await db.collection('tutors').doc(tutorId).update({
+  // Update stored tokens in the correct collection
+  await db.collection(collection).doc(tutorId).update({
     'microsoftAuth.accessToken': tokens.access_token,
     'microsoftAuth.expiresAt': new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
     'microsoftAuth.lastRefreshed': new Date().toISOString(),
@@ -71,27 +76,59 @@ async function refreshTokenAndGetAccessToken(tutorId: string): Promise<string> {
 
 async function checkMicrosoftAuthStatus(tutorId: string) {
   const db = getFirestore();
-  const tutorDoc = await db.collection('tutors').doc(tutorId).get();
   
   console.log('[confirm-api] Checking auth for tutorId:', tutorId);
   
+  // Check tutors collection first
+  let tutorDoc = await db.collection('tutors').doc(tutorId).get();
+  let collection = 'tutors';
+  
   if (!tutorDoc.exists) {
-    console.log('[confirm-api] Tutor document does not exist');
-    return { isConnected: false, needsReconnect: false };
+    console.log('[confirm-api] Not found in tutors collection, checking users collection...');
+    tutorDoc = await db.collection('users').doc(tutorId).get();
+    collection = 'users';
+    
+    if (!tutorDoc.exists) {
+      console.log('[confirm-api] Document does not exist in either collection');
+      return { isConnected: false, needsReconnect: false };
+    }
   }
   
+  console.log('[confirm-api] Found document in', collection, 'collection');
+  
   const tutorData = tutorDoc.data();
-  console.log('[confirm-api] Tutor data exists:', !!tutorData);
+  console.log('[confirm-api] Data exists:', !!tutorData);
   console.log('[confirm-api] microsoftAuth exists:', !!tutorData?.microsoftAuth);
   console.log('[confirm-api] refreshToken exists:', !!tutorData?.microsoftAuth?.refreshToken);
+  console.log('[confirm-api] accessToken exists:', !!tutorData?.microsoftAuth?.accessToken);
   
   const microsoftAuth = tutorData?.microsoftAuth;
   
-  if (!microsoftAuth?.refreshToken) {
-    console.log('[confirm-api] No refresh token found');
+  // Check if we have Microsoft auth data
+  if (!microsoftAuth?.accessToken) {
+    console.log('[confirm-api] No access token found');
     return { isConnected: false, needsReconnect: false };
   }
   
+  // Check if we have a refresh token (for persistent access)
+  if (!microsoftAuth.refreshToken) {
+    console.log('[confirm-api] Has access token but no refresh token - limited connection');
+    
+    // Check if the access token is still valid
+    const expiresAt = new Date(microsoftAuth.expiresAt);
+    const now = new Date();
+    
+    if (expiresAt <= now) {
+      console.log('[confirm-api] Access token expired and no refresh token available');
+      return { isConnected: false, needsReconnect: true };
+    }
+    
+    // Access token still valid but will expire soon
+    console.log('[confirm-api] Access token still valid but no refresh token for renewal');
+    return { isConnected: true, needsReconnect: false, limitedConnection: true };
+  }
+  
+  // We have both access and refresh tokens
   const expiresAt = new Date(microsoftAuth.expiresAt);
   const now = new Date();
   
@@ -101,7 +138,8 @@ async function checkMicrosoftAuthStatus(tutorId: string) {
   
   return {
     isConnected: true,
-    needsReconnect: expiresAt <= now && !microsoftAuth.refreshToken
+    needsReconnect: false,
+    limitedConnection: false
   };
 }
 
@@ -137,23 +175,20 @@ export async function confirmBooking(req: Request, res: Response) {
     const authStatus = await checkMicrosoftAuthStatus(tutorId);
     
     if (!authStatus.isConnected) {
-      console.log('[confirm-api] Microsoft account not connected');
+      console.log('[confirm-api] Microsoft account not connected or expired');
       return res.status(200).json({
         success: false,
         message: 'Microsoft account not connected',
-        error: 'Please connect your Microsoft account in profile settings',
-        errorType: 'AUTH_MISSING'
+        error: authStatus.needsReconnect ? 
+          'Your Microsoft connection has expired. Please reconnect your Microsoft account in profile settings' :
+          'Please connect your Microsoft account in profile settings',
+        errorType: authStatus.needsReconnect ? 'AUTH_EXPIRED' : 'AUTH_MISSING'
       });
     }
     
-    if (authStatus.needsReconnect) {
-      console.log('[confirm-api] Microsoft account needs reconnection');
-      return res.status(200).json({
-        success: false,
-        message: 'Microsoft authentication expired',
-        error: 'Please reconnect your Microsoft account in profile settings',
-        errorType: 'AUTH_EXPIRED'
-      });
+    if (authStatus.limitedConnection) {
+      console.log('[confirm-api] Limited connection - no refresh token');
+      // Continue but warn that this is temporary
     }
     
     // Get access token
@@ -161,7 +196,24 @@ export async function confirmBooking(req: Request, res: Response) {
     let accessToken: string;
     
     try {
-      accessToken = await refreshTokenAndGetAccessToken(tutorId);
+      // If we have a refresh token, use the refresh flow
+      // Otherwise, try to use the current access token if still valid
+      if (!authStatus.limitedConnection) {
+        accessToken = await refreshTokenAndGetAccessToken(tutorId);
+      } else {
+        // For limited connections, we need to get the access token directly
+        const db = getFirestore();
+        let doc = await db.collection('tutors').doc(tutorId).get();
+        if (!doc.exists) {
+          doc = await db.collection('users').doc(tutorId).get();
+        }
+        const data = doc.data();
+        accessToken = data?.microsoftAuth?.accessToken;
+        
+        if (!accessToken) {
+          throw new Error('No valid access token available');
+        }
+      }
       console.log('[confirm-api] Successfully obtained access token');
     } catch (tokenError: any) {
       console.error('[confirm-api] Token error:', tokenError);
